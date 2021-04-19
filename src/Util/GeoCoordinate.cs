@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace yoshi_revision.src.Util
@@ -8,7 +6,8 @@ namespace yoshi_revision.src.Util
 
     /**
      * This immutable class represents a geographic coordinate with a latitude and longitude value.
-     * TODO: Check whether it is better to use the "native" GeoCoordinate class 
+     * Note: We cannot access the native .NET GeoCoordinate class since the project is a Universal Windows APP. Instead
+     * we use a converted (from Java to C#) GeoCoordinate class from the previous YOSHI code.
      */
     public class GeoCoordinate : IComparable<GeoCoordinate>
     {
@@ -80,8 +79,8 @@ namespace yoshi_revision.src.Util
 	     */
         public GeoCoordinate(double latitude, double longitude)
         {
-		    this.latitude = ValidateLatitude(latitude);
-		    this.longitude = ValidateLongitude(longitude);
+            this.latitude = ValidateLatitude(latitude);
+            this.longitude = ValidateLongitude(longitude);
         }
 
         /**
@@ -97,8 +96,8 @@ namespace yoshi_revision.src.Util
 	     */
         public GeoCoordinate(int latitudeE6, int longitudeE6)
         {
-		    this.latitude = ValidateLatitude(IntToDouble(latitudeE6));
-		    this.longitude = ValidateLongitude(IntToDouble(longitudeE6));
+            this.latitude = ValidateLatitude(IntToDouble(latitudeE6));
+            this.longitude = ValidateLongitude(IntToDouble(longitudeE6));
         }
 
         /**
@@ -142,7 +141,7 @@ namespace yoshi_revision.src.Util
             {
                 return new GeoCoordinate(latitude, longitude);
             }
-            catch (ArgumentException e)
+            catch (ArgumentException)
             {
                 return new GeoCoordinate(GeoCoordinate.DoubleToInt(latitude),
                         GeoCoordinate.DoubleToInt(longitude));
@@ -271,10 +270,10 @@ namespace yoshi_revision.src.Util
 	     */
         public static double SphericalDistance(GeoCoordinate gc1, GeoCoordinate gc2)
         {
-		    if (gc1 == null || gc2 == null)
-			    throw new ArgumentException(
-					    "The GeoCoordinates for distance calculations may not be null.");
-		    return SphericalDistance(gc1.GetLongitude(), gc1.GetLatitude(), gc2.GetLongitude(), gc2.GetLatitude());
+            if (gc1 == null || gc2 == null)
+                throw new ArgumentException(
+                        "The GeoCoordinates for distance calculations may not be null.");
+            return SphericalDistance(gc1.GetLongitude(), gc1.GetLatitude(), gc2.GetLongitude(), gc2.GetLatitude());
         }
 
         /**
@@ -305,7 +304,7 @@ namespace yoshi_revision.src.Util
             double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) + Math.Cos(ConvertToRadians(lat1))
                     * Math.Cos(ConvertToRadians(lat2)) * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
             double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-            return c * EQUATORIALRADIUS; 
+            return c * EQUATORIALRADIUS;
         }
 
         /**
@@ -506,11 +505,12 @@ namespace yoshi_revision.src.Util
             {
                 return true;
             }
-            else if (!(obj is GeoCoordinate coordinate)) 
+            else if (!(obj is GeoCoordinate coordinate))
             {
                 return false;
-            } else
-                {
+            }
+            else
+            {
                 GeoCoordinate other = coordinate;
                 if (this.latitude != other.latitude)
                 {
@@ -522,7 +522,7 @@ namespace yoshi_revision.src.Util
                 }
                 return true;
             }
-	    }
+        }
 
         /**
 	     * This method is necessary for inserting GeoCoordinates into tree data structures.

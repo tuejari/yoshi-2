@@ -11,7 +11,7 @@ namespace YOSHI.CommunityData
     {
         public Repository Repo { get; set; }
         public IReadOnlyList<RepositoryContributor> Contributors { get; set; }
-        public IReadOnlyList<User> ContributorsAsUsers { get; set; } 
+        public IReadOnlyList<User> ContributorsAsUsers { get; set; }
         public IReadOnlyList<User> Collaborators { get; set; }
         public Dictionary<string, IReadOnlyList<User>> MapUserFollowers { get; set; }
         public Dictionary<string, IReadOnlyList<User>> MapUserFollowing { get; set; }

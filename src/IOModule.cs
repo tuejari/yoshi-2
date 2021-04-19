@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Text;
 using YOSHI.CommunityData;
 
 namespace YOSHI
@@ -21,7 +19,9 @@ namespace YOSHI
         /// This method is used to guide the user in inputting the input directory, input filename, outfput directory 
         /// and the output filename.
         /// </summary>
-        public static List<Community> TakeInput()
+        /// <exception cref="System.IO.IOException">Thrown when something goes wrong while reading the input or when 
+        /// writing to the output file.</exception>
+        public static (List<Community>, int) TakeInput()
         {
             bool validInFile = false;
             bool validOutFile = false;
@@ -62,11 +62,16 @@ namespace YOSHI
                     validOutFile = true;
                 }
 
-                return ReadFile(inFile);
-            } 
-            catch (Exception e)
+                // https://docs.microsoft.com/en-us/bingmaps/getting-started/bing-maps-dev-center-help/understanding-bing-maps-transactions?redirectedfrom=MSDN
+                Console.WriteLine("Windows App, Non-profit, and Education keys can make 50,000 requests per 24 hour period.");
+                Console.WriteLine("Please enter the number of Bing Maps requests left.");
+                int bingRequestsLeft = Convert.ToInt32(Console.ReadLine());
+
+                return (ReadFile(inFile), bingRequestsLeft);
+            }
+            catch (IOException e)
             {
-                throw new Exception("Failed to read input", e);
+                throw new IOException("Failed to read input or to write headers to output file", e);
             }
         }
 
@@ -75,6 +80,7 @@ namespace YOSHI
         /// specified input directory (InDir).
         /// </summary>
         /// <returns>A list of communities storing just the repo owner and repo name.</returns>
+        /// <exception cref="System.IO.IOException">Thrown when something goes wrong while reading the input file.</exception>
         private static List<Community> ReadFile(string inFile)
         {
             List<Community> communities = new List<Community>();
@@ -90,11 +96,12 @@ namespace YOSHI
                     Community community = new Community(csv.GetField("RepoName"), csv.GetField("RepoOwner"));
                     communities.Add(community);
                 }
-            } catch (IOException e)
+            }
+            catch (IOException e)
             {
                 throw new IOException("Something went wrong while reading the input file.", e);
             }
-            
+
             return communities;
         }
 

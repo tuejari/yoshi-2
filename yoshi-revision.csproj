@@ -117,7 +117,6 @@
     <Compile Include="src\CommunityData\Metrics.cs" />
     <Compile Include="src\CommunityData\Pattern.cs" />
     <Compile Include="src\DataRetriever.cs" />
-    <Compile Include="src\GeoService.cs" />
     <Compile Include="src\IOModule.cs" />
     <Compile Include="src\PatternProcessor.cs" />
     <Compile Include="src\Program.cs" />

@@ -2,9 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using YOSHI.CommunityData;
-using YOSHI.CommunityData.MetricData;
 using yoshi_revision.src.Util;
 
 namespace YOSHI
@@ -87,7 +85,7 @@ namespace YOSHI
         /// </summary>
         /// <param name="mapUserRepositories">A mapping from usernames to the repositories that they worked on.</param>
         /// <returns>The average number of common projects between users.</returns>
-        private static float AvgCommonProjects(Dictionary<string, IReadOnlyList<Repository>> mapUserRepositories, 
+        private static float AvgCommonProjects(Dictionary<string, IReadOnlyList<Repository>> mapUserRepositories,
             string repoName)
         {
             // Obtain a mapping from all users (usernames) to the names of the repositories they worked on
@@ -171,7 +169,7 @@ namespace YOSHI
         {
             // We group the list of commits per committer
             Dictionary<string, List<DateTimeOffset>> mapUserCommitDate = new Dictionary<string, List<DateTimeOffset>>();
-            foreach(GitHubCommit commit in commits)
+            foreach (GitHubCommit commit in commits)
             {
                 string committer = commit.Committer.Login;
                 if (committer != null)
@@ -183,7 +181,7 @@ namespace YOSHI
 
             int totalCommitterLongevityInDays = 0;
             // For each committer, we compute the dates of their first- and last commit.
-            foreach(KeyValuePair<string,List<DateTimeOffset>> userCommitDate in mapUserCommitDate)
+            foreach (KeyValuePair<string, List<DateTimeOffset>> userCommitDate in mapUserCommitDate)
             {
                 // TODO: Check whether we want to use author date or committer date.
                 DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
@@ -191,7 +189,7 @@ namespace YOSHI
                 foreach (DateTimeOffset commitDate in userCommitDate.Value)
                 {
                     // If current evaluated commit is earlier than previous earliest commit
-                    if (dateFirstCommit.CompareTo(commitDate) < 0) 
+                    if (dateFirstCommit.CompareTo(commitDate) < 0)
                     {
                         dateFirstCommit = commitDate;
                     } // If current evaluated commit is later than previous last commit 
@@ -268,8 +266,6 @@ namespace YOSHI
         private static int ProjectLifetimeInDays(IReadOnlyList<GitHubCommit> commits)
         {
             // TODO: Check whether we want to use author date or committer date.
-            // TODO: Move part computing first and last commit of this method to an auxilliary method. (currently
-            // code is duplicated)
             DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
             DateTimeOffset dateLastCommit = DateTimeOffset.MinValue;
             foreach (GitHubCommit commit in commits)
@@ -322,7 +318,7 @@ namespace YOSHI
                 sumDistances += mediumDistance / 1000;
             }
 
-            return (double) sumDistances / coordinates.Count;
+            return (double)sumDistances / coordinates.Count;
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Windows.Services.Maps;
 using YOSHI.CommunityData;
 
 namespace YOSHI
@@ -29,40 +28,50 @@ namespace YOSHI
         static async Task Main()
         {
             // Retrieve the communities through console input handled by the IOModule.
-            List<Community> communities = IOModule.TakeInput();
+            (List<Community> communities, int bingRequestsLeft) = IOModule.TakeInput();
+            DataRetriever.BingRequestsLeft = bingRequestsLeft;
 
-            //foreach (Community community in communities)
-            //{
-            //    Console.WriteLine("Started processing community {0}, url: {1}", community.RepoOwner, community.RepoName);
-            //    // Retrieving GitHub data needed to compute whether the community exhibits a structure
-            //    Console.WriteLine("Retrieving GitHub data needed for computing structure...");
-            //    DataRetriever.RetrieveStructureData(community);
+            try
+            {
+                //foreach (Community community in communities)
+                //{
+                //    Console.WriteLine("Started processing community {0}, url: {1}", community.RepoOwner, community.RepoName);
+                //    // Retrieving GitHub data needed to compute whether the community exhibits a structure
+                //    Console.WriteLine("Retrieving GitHub data needed for computing structure...");
+                //    DataRetriever.RetrieveStructureData(community);
 
-            //    // If the community exhibits a structure then:
-            //    if (AttributeProcessor.ComputeStructure(community))
-            //    {
-            //        // Miscellaneous characteristics are: dispersion, formality, cohesion, engagement, longevity
-            //        Console.WriteLine("Retrieving GitHub data needed for miscellaneous characteristics...");
-            //        DataRetriever.RetrieveMiscellaneousData(community);
+                //    // If the community exhibits a structure then:
+                //    if (AttributeProcessor.ComputeStructure(community))
+                //    {
+                //        // Miscellaneous characteristics are: dispersion, formality, cohesion, engagement, longevity
+                //        Console.WriteLine("Retrieving GitHub data needed for miscellaneous characteristics...");
+                //        DataRetriever.RetrieveMiscellaneousData(community);
 
-            //        Console.WriteLine("Computing miscellaneous characteristics...");
-            //        AttributeProcessor.ComputeMiscellaneousAttributes(community);
+                //        Console.WriteLine("Computing miscellaneous characteristics...");
+                //        AttributeProcessor.ComputeMiscellaneousAttributes(community);
 
-            //        Console.WriteLine("Determining community pattern...");
-            //        PatternProcessor.ComputePattern(community);
-            //    }
-            //    else
-            //    {
-            //        // The community exhibits no structure, hence we cannot compute a pattern. Thus we skip computing 
-            //        // all other characteristics.
-            //        Console.WriteLine("This community does not exhibit a structure.");
-            //    }
+                //        Console.WriteLine("Determining community pattern...");
+                //        PatternProcessor.ComputePattern(community);
+                //    }
+                //    else
+                //    {
+                //        // The community exhibits no structure, hence we cannot compute a pattern. Thus we skip computing 
+                //        // all other characteristics.
+                //        Console.WriteLine("This community does not exhibit a structure.");
+                //    }
 
-            //    Console.WriteLine("Writing community data to file...");
-            //    IOModule.WriteToFile(community);
+                //    Console.WriteLine("Writing community data to file...");
+                //    IOModule.WriteToFile(community);
 
-            //    Console.WriteLine("Finished processing community from {0}, url: {1}", community.RepoOwner, community.RepoName);
-            //}
+                //    Console.WriteLine("Finished processing community from {0}, url: {1}", community.RepoOwner, community.RepoName);
+                //}
+            }
+            catch (Exception)
+            {
+                // We want to output the number of Bing Maps Requests left, since it can take hours for Bing Maps Requests to update
+                Console.WriteLine("There are still {0} Bing Maps Requests left", DataRetriever.BingRequestsLeft);
+                throw;
+            }
         }
     }
 }
