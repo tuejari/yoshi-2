@@ -111,7 +111,7 @@ namespace yoshi_revision.src.Util
 	     *            degrees using a WGS84 representation. The coordinate order in the POINT is
 	     *            defined as POINT(long lat)
 	     */
-        public GeoCoordinate(String wellKnownText)
+        public GeoCoordinate(string wellKnownText)
         {
             Match m = wktPointPattern.Match(wellKnownText);
             this.longitude = ValidateLongitude(Convert.ToDouble(m.Groups[1]));
@@ -130,7 +130,7 @@ namespace yoshi_revision.src.Util
 	     * @throws ArgumentException
 	     *             if the latLonString could not be interpreted as a coordinate
 	     */
-        public static GeoCoordinate FromString(String latLonString)
+        public static GeoCoordinate FromString(string latLonString)
         {
             String[] splitted = Regex.Split(latLonString, "[,;:\\s]");
             if (splitted.Length != 2)
@@ -143,8 +143,8 @@ namespace yoshi_revision.src.Util
             }
             catch (ArgumentException)
             {
-                return new GeoCoordinate(GeoCoordinate.DoubleToInt(latitude),
-                        GeoCoordinate.DoubleToInt(longitude));
+                return new GeoCoordinate(DoubleToInt(latitude),
+                        DoubleToInt(longitude));
             }
         }
 

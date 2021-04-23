@@ -123,7 +123,7 @@ namespace YOSHI
         }
 
         /// <summary>
-        /// This method computes the follower/following connections between each of the contributors and collaborators,
+        /// This method computes the follower/following connections between each of the members,
         /// but its result does not distinguish between followers and following. 
         /// </summary>
         /// <param name="mapUserFollowers">A mapping for each username to a list of the users followers.</param>
@@ -132,30 +132,59 @@ namespace YOSHI
         /// <returns>A mapping for each username to a combined set of followers and following from which the names 
         /// have been extracted.</returns>
         private static Dictionary<string, HashSet<string>> FollowConnections(
-            Dictionary<string, IReadOnlyList<User>> mapUserFollowers,
-            Dictionary<string, IReadOnlyList<User>> mapUserFollowing)
+            Dictionary<string, HashSet<string>> mapUserFollowers,
+            Dictionary<string, HashSet<string>> mapUserFollowing)
         {
             Dictionary<string, HashSet<string>> followConnections = new Dictionary<string, HashSet<string>>();
 
             // Obtain a mapping from all users (usernames) to the names of the followers and following
-            foreach (KeyValuePair<string, IReadOnlyList<User>> mapUserFollower in mapUserFollowers)
+            foreach (string user in mapUserFollowers.Keys)
             {
-                foreach (User follower in mapUserFollower.Value)
+                followConnections.Add(user, new HashSet<string>(mapUserFollowers[user].Union(mapUserFollowing[user])));
+            }
+
+            return followConnections;
+        }
+
+        /// <summary>
+        /// Computes the connections between pull request authors and pull request commenters.
+        /// </summary>
+        /// <param name="mapPullReqsToComments">A mapping from each pull request to their pull request review comments.</param>
+        /// <returns>A mapping for each user to all other users that they're connected to through pull requests.</returns>
+        private static Dictionary<string, HashSet<string>> PullReqConnections(
+            Dictionary<PullRequest, IReadOnlyList<PullRequestReviewComment>> mapPullReqsToComments,
+            HashSet<string> members)
+        {
+            Dictionary<string, HashSet<string>> pullReqConnections = new Dictionary<string, HashSet<string>>();
+            // Initialize dictionary for every member to an empty set
+            foreach (string member in members)
+            {
+                pullReqConnections.Add(member, new HashSet<string>());
+            }
+
+            // Add the connections for each pull request commenter and author
+            foreach (KeyValuePair<PullRequest, IReadOnlyList<PullRequestReviewComment>> mapPullReqToComments in mapPullReqsToComments)
+            {
+                string pullReqAuthor = mapPullReqToComments.Key.User.Login;
+                // Make sure that the pull request author is also a member
+                // (i.e., whether they committed to this repository at least once)
+                if (pullReqAuthor != null && members.Contains(pullReqAuthor))
                 {
-                    followConnections.Add(mapUserFollower.Key, new HashSet<string>());
-                    followConnections[mapUserFollower.Key].Add(follower.Name);
+                    foreach (PullRequestReviewComment comment in mapPullReqToComments.Value)
+                    {
+                        string pullReqCommenter = comment.User.Login;
+                        // Make sure that the pull request commenter is also a member
+                        // (i.e., whether they committed to this repository at least once)
+                        if (pullReqCommenter != null && members.Contains(pullReqCommenter))
+                        {
+                            pullReqConnections[pullReqCommenter].Add(pullReqAuthor);
+                            pullReqConnections[pullReqAuthor].Add(pullReqCommenter);
+                        }
+                    }
                 }
             }
 
-            foreach (KeyValuePair<string, IReadOnlyList<User>> userFollowing in mapUserFollowing)
-            {
-                foreach (User following in userFollowing.Value)
-                {
-                    followConnections.Add(userFollowing.Key, new HashSet<string>());
-                    followConnections[userFollowing.Key].Add(following.Name);
-                }
-            }
-            return followConnections;
+            return pullReqConnections;
         }
 
         // ------------------------------------------------- LONGEVITY -------------------------------------------------
@@ -167,7 +196,7 @@ namespace YOSHI
         /// <returns>The average committer longevity.</returns>
         private static float AvgCommitterLongevity(IReadOnlyList<GitHubCommit> commits)
         {
-            // We group the list of commits per committer
+            // We group the list of commits' datetimes per committer
             Dictionary<string, List<DateTimeOffset>> mapUserCommitDate = new Dictionary<string, List<DateTimeOffset>>();
             foreach (GitHubCommit commit in commits)
             {
@@ -183,7 +212,9 @@ namespace YOSHI
             // For each committer, we compute the dates of their first- and last commit.
             foreach (KeyValuePair<string, List<DateTimeOffset>> userCommitDate in mapUserCommitDate)
             {
-                // TODO: Check whether we want to use author date or committer date.
+                // We use committer date instead of author date, since that's when the commit was last applied.
+                // Source: https://stackoverflow.com/questions/18750808/difference-between-author-and-committer-in-git
+                // NOTE: this limits the metric, as we do not compute the longevity for each member.
                 DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
                 DateTimeOffset dateLastCommit = DateTimeOffset.MinValue;
                 foreach (DateTimeOffset commitDate in userCommitDate.Value)
@@ -208,41 +239,42 @@ namespace YOSHI
         // ------------------------------------------------- FORMALITY -------------------------------------------------
 
         /// <summary>
-        /// This method computes the average membership type from a list of contributors and a list of collaborators. 
-        /// The levels of control assigned to repository members are +1 for contributors and +2 for collaborators (which
-        /// have more privileges). 
+        /// This method computes the average membership type from a list of members.
         /// </summary>
-        /// <param name="contributors">A list of contributors from a repository.</param>
-        /// <param name="collaborators">A list of collaborators from a repository.</param>
-        /// <returns>A float denoting the average membership type of the contributors and collaborators.</returns>
-        private static float AvgMembershipType(IReadOnlyList<RepositoryContributor> contributors, IReadOnlyList<User> collaborators)
+        /// <returns>A float denoting the average membership type.</returns>
+        private static float AvgMembershipType()
         {
+            float avgMembershipType = 0F;
+
+            // TODO: Use another way to determine membership types, because we cannot retrieve collaborators and we 
+            // cannot retrieve all contributors (which prevents us from applying alias resolution)
+
             // We transform the lists of contributors and collaborators to only the usernames, so it becomes easier
             // to compute the difference of two lists. 
-            List<string> contributorNames = new List<string>();
-            List<string> collaboratorNames = new List<string>();
+            //List<string> contributorNames = new List<string>();
+            //List<string> collaboratorNames = new List<string>();
 
-            foreach (RepositoryContributor contributor in contributors)
-            {
-                if (contributor.Login != null)
-                {
-                    contributorNames.Add(contributor.Login);
-                }
-            }
+            //foreach (RepositoryContributor contributor in contributors)
+            //{
+            //    if (contributor.Login != null)
+            //    {
+            //        contributorNames.Add(contributor.Login);
+            //    }
+            //}
 
-            foreach (User collaborator in collaborators)
-            {
-                if (collaborator.Login != null)
-                {
-                    collaboratorNames.Add(collaborator.Login);
-                }
-            }
+            //foreach (User collaborator in collaborators)
+            //{
+            //    if (collaborator.Login != null)
+            //    {
+            //        collaboratorNames.Add(collaborator.Login);
+            //    }
+            //}
 
-            // We remove collaborators that are also marked as contributors from the list of contributors
-            // (collaborators count stronger due to more permissions)
-            List<string> cleanedContributorNames = contributorNames.Except(collaboratorNames).ToList();
-            float avgMembershipType = (float)(cleanedContributorNames.Count + collaboratorNames.Count * 2) /
-                (cleanedContributorNames.Count + collaboratorNames.Count);
+            //// We remove collaborators that are also marked as contributors from the list of contributors
+            //// (collaborators count stronger due to more permissions)
+            //List<string> cleanedContributorNames = contributorNames.Except(collaboratorNames).ToList();
+            //float avgMembershipType = (float)(cleanedContributorNames.Count + collaboratorNames.Count * 2) /
+            //    (cleanedContributorNames.Count + collaboratorNames.Count);
 
             return avgMembershipType;
         }
@@ -254,6 +286,8 @@ namespace YOSHI
         /// <returns>The number of milestones in the given list.</returns>
         private static int NrProjectMilestones(IReadOnlyList<Milestone> milestones)
         {
+            // NOTE: This method is only introduced for clarity. If this method did not exist, it may be less visible
+            // compared to other metrics.
             return milestones.Count;
         }
 
@@ -265,7 +299,8 @@ namespace YOSHI
         /// <returns>The project lifetime in number of days.</returns>
         private static int ProjectLifetimeInDays(IReadOnlyList<GitHubCommit> commits)
         {
-            // TODO: Check whether we want to use author date or committer date.
+            // We use committer date instead of author date, since that's when the commit was last applied.
+            // Source: https://stackoverflow.com/questions/18750808/difference-between-author-and-committer-in-git
             DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
             DateTimeOffset dateLastCommit = DateTimeOffset.MinValue;
             foreach (GitHubCommit commit in commits)
@@ -297,7 +332,9 @@ namespace YOSHI
         /// <returns>The average geographical distance between the given list of coordinates.</returns>
         private static double AvgGeographicalDistance(List<GeoCoordinate> coordinates)
         {
-            // sum of medium distances in km as a double
+            // NOTE: threshold (percentage) for number of coordinates should be set in DataRetriever
+
+            // sum of medium distances in km
             double sumDistances = 0.0;
 
             // Compute the medium distance for each distinct pair of coordinates in the given list of coordinates
@@ -310,10 +347,12 @@ namespace YOSHI
                     if (i != j)
                     {
                         GeoCoordinate coordinateB = coordinates[j];
-                        mediumDistance += coordinateA.SphericalDistance(coordinateB);
+                        // NOTE: Vincenty is faster than spherical, but takes longer. Based on processing times, may
+                        // want to swap the distance method
+                        mediumDistance += coordinateA.VincentyDistance(coordinateB);
                     }
                 }
-                mediumDistance /= (coordinates.Count - 1);
+                mediumDistance = (double)mediumDistance / (coordinates.Count - 1);
                 // converted to km
                 sumDistances += mediumDistance / 1000;
             }

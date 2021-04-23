@@ -10,17 +10,17 @@ namespace YOSHI.CommunityData
     public class GitHubData
     {
         public Repository Repo { get; set; }
-        public IReadOnlyList<RepositoryContributor> Contributors { get; set; }
-        public IReadOnlyList<User> ContributorsAsUsers { get; set; }
-        public IReadOnlyList<User> Collaborators { get; set; }
-        public Dictionary<string, IReadOnlyList<User>> MapUserFollowers { get; set; }
-        public Dictionary<string, IReadOnlyList<User>> MapUserFollowing { get; set; }
+        public List<User> Members { get; set; }
+        public HashSet<string> MemberUsernames { get; set; }
+        // Followers and following are limited to users that also worked on this repository
+        public Dictionary<string, HashSet<string>> MapUserFollowers { get; set; }
+        public Dictionary<string, HashSet<string>> MapUserFollowing { get; set; }
         public Dictionary<string, IReadOnlyList<Repository>> MapUserRepositories { get; set; }
 
         public IReadOnlyList<Milestone> Milestones { get; set; }
         public IReadOnlyList<GitHubCommit> Commits { get; set; }
         public IReadOnlyList<CommitComment> CommitComments { get; set; }
-        public IReadOnlyList<PullRequestReviewComment> PullReqComments { get; set; }
+        public Dictionary<PullRequest, IReadOnlyList<PullRequestReviewComment>> MapPullReqsToComments { get; set; }
         // Regarding the difference between Watchers and Stargazers:
         // https://developer.github.com/changes/2012-09-05-watcher-api/
         // Watchers/Subscribers are users watching the repository. Watching a repository registers the user to receive

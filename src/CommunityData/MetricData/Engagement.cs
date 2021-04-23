@@ -12,7 +12,7 @@ namespace YOSHI.CommunityData.MetricData
         public Dictionary<User, float> Watchers { get; set; }
         public Dictionary<User, float> Stargazers { get; set; }
         public Dictionary<User, float> NrPullReqComments { get; set; }
-        // Note: All distributions are monthly
+        // NOTE: All distributions are monthly
         public Dictionary<User, float> FileCollabDistribution { get; set; }
         public Dictionary<User, float> CommitDistribution { get; set; }
         public Dictionary<User, float> PullReqCommitDistribution { get; set; }
