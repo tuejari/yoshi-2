@@ -26,39 +26,39 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <param name="memberUsernames">A list of usernames of all members.</param>
         /// <returns>The average committer longevity.</returns>
         private static float MeanCommitterLongevity(IReadOnlyList<GitHubCommit> commits, HashSet<string> memberUsernames)
-        {
+        { 
             // We group the list of commits' datetimes per committer
-            Dictionary<string, List<DateTimeOffset>> mapUserCommitDate = new Dictionary<string, List<DateTimeOffset>>();
+            Dictionary<string, List<DateTime>> mapUserCommitDate = new Dictionary<string, List<DateTime>>();
             foreach (GitHubCommit commit in commits)
             {
                 string committer = commit.Committer.Login;
-                if (committer != null & memberUsernames.Contains(committer))
+                if (committer != null && memberUsernames.Contains(committer))
                 {
                     if (!mapUserCommitDate.ContainsKey(committer))
                     {
-                        mapUserCommitDate.Add(committer, new List<DateTimeOffset>());
+                        mapUserCommitDate.Add(committer, new List<DateTime>());
                     }
-                    mapUserCommitDate[committer].Add(commit.Commit.Committer.Date);
+                    mapUserCommitDate[committer].Add(commit.Commit.Committer.Date.Date);
                 }
             }
 
             int totalCommitterLongevityInDays = 0;
             // For each committer, we compute the dates of their first- and last commit.
-            foreach (KeyValuePair<string, List<DateTimeOffset>> userCommitDate in mapUserCommitDate)
+            foreach (KeyValuePair<string, List<DateTime>> userCommitDate in mapUserCommitDate)
             {
                 // We use committer date instead of author date, since that's when the commit was last applied.
                 // Source: https://stackoverflow.com/questions/18750808/difference-between-author-and-committer-in-git
                 // NOTE: this limits the metric, as we do not compute the longevity for each member.
-                DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
-                DateTimeOffset dateLastCommit = DateTimeOffset.MinValue;
-                foreach (DateTimeOffset commitDate in userCommitDate.Value)
+                DateTime dateFirstCommit = DateTimeOffset.MaxValue.Date;
+                DateTime dateLastCommit = DateTimeOffset.MinValue.Date;
+                foreach (DateTime commitDate in userCommitDate.Value)
                 {
-                    // If current evaluated commit is earlier than previous earliest commit
-                    if (dateFirstCommit.CompareTo(commitDate) < 0)
+                    // If current earliest commit is later than current commit
+                    if (dateFirstCommit.CompareTo(commitDate) > 0)
                     {
                         dateFirstCommit = commitDate;
-                    } // If current evaluated commit is later than previous last commit 
-                    else if (dateLastCommit.CompareTo(commitDate) > 0)
+                    } // If current latest commit is earlier than current commit
+                    if (dateLastCommit.CompareTo(commitDate) < 0)
                     {
                         dateLastCommit = commitDate;
                     }

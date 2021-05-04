@@ -1,6 +1,7 @@
 ﻿using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using YOSHI.CommunityData;
 using YOSHI.CommunityData.MetricData;
 
@@ -28,37 +29,32 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <returns>A float denoting the average membership type.</returns>
         private static float MeanMembershipType(List<GitHubCommit> commits, HashSet<string> memberUsernames)
         {
-            float meanMembershipType = 0F;
-
-            // TODO: Use another way to determine membership types, because we cannot retrieve collaborators and we 
-            // cannot retrieve all contributors (which prevents us from applying alias resolution)
-
             // We transform the lists of contributors and collaborators to only the usernames, so it becomes easier
             // to compute the difference of two lists. 
-            //List<string> contributorNames = new List<string>();
-            //List<string> collaboratorNames = new List<string>();
+            HashSet<string> committers = new HashSet<string>();
+            HashSet<string> authors = new HashSet<string>();
 
-            //foreach (RepositoryContributor contributor in contributors)
-            //{
-            //    if (contributor.Login != null)
-            //    {
-            //        contributorNames.Add(contributor.Login);
-            //    }
-            //}
+            foreach (GitHubCommit commit in commits)
+            {
+                if (commit.Committer != null && commit.Committer.Login != null && memberUsernames.Contains(commit.Committer.Login))
+                {
+                    committers.Add(commit.Committer.Login);
+                }
+                if (commit.Author != null && commit.Author.Login != null && memberUsernames.Contains(commit.Author.Login))
+                {
+                    committers.Add(commit.Author.Login);
+                }
+            }
+            HashSet<string> contributors = authors.Except(committers).ToHashSet();
+            HashSet<string> collaborators = committers;
 
-            //foreach (User collaborator in collaborators)
-            //{
-            //    if (collaborator.Login != null)
-            //    {
-            //        collaboratorNames.Add(collaborator.Login);
-            //    }
-            //}
+            if ((contributors.Count + collaborators.Count) != memberUsernames.Count)
+            {
+                throw new Exception("less/more contributors/collaborators than members");
+            }
 
-            //// We remove collaborators that are also marked as contributors from the list of contributors
-            //// (collaborators count stronger due to more permissions)
-            //List<string> cleanedContributorNames = contributorNames.Except(collaboratorNames).ToList();
-            //float meanMembershipType = (float)(cleanedContributorNames.Count + collaboratorNames.Count * 2) /
-            //    (cleanedContributorNames.Count + collaboratorNames.Count);
+            float meanMembershipType = (float)(contributors.Count + collaborators.Count * 2) /
+                (memberUsernames.Count);
 
             return meanMembershipType;
         }
@@ -73,17 +69,17 @@ namespace YOSHI.CharacteristicProcessorNS
         {
             // We use committer date instead of author date, since that's when the commit was last applied.
             // Source: https://stackoverflow.com/questions/18750808/difference-between-author-and-committer-in-git
-            DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
-            DateTimeOffset dateLastCommit = DateTimeOffset.MinValue;
+            DateTime dateFirstCommit = DateTimeOffset.MaxValue.Date;
+            DateTime dateLastCommit = DateTimeOffset.MinValue.Date;
             foreach (GitHubCommit commit in commits)
             {
-                DateTimeOffset commitDate = commit.Commit.Committer.Date;
-                // If current evaluated commit is earlier than previous earliest commit
-                if (dateFirstCommit.CompareTo(commitDate) < 0)
+                DateTime commitDate = commit.Commit.Committer.Date.Date;
+                // If current earliest commit is later than current commit
+                if (dateFirstCommit.CompareTo(commitDate) > 0)
                 {
                     dateFirstCommit = commitDate;
-                } // If current evaluated commit is later than previous last commit 
-                else if (dateLastCommit.CompareTo(commitDate) > 0)
+                } // If current latest commit is earlier than current commit
+                if (dateLastCommit.CompareTo(commitDate) < 0)
                 {
                     dateLastCommit = commitDate;
                 }
