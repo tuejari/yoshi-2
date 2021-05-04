@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Windows.Services.Maps;
 using YOSHI.CommunityData;
 
 namespace YOSHI.DataRetrieverNS
@@ -27,15 +26,11 @@ namespace YOSHI.DataRetrieverNS
             {
                 // Read the GitHub Access Token and the Bing Maps Key from Windows Environment Variables
                 string githubAccessToken = Environment.GetEnvironmentVariable("YOSHI_GitHubAccessToken"); // TODO: Maybe use application / oauth key
-                string bingMapsKey = Environment.GetEnvironmentVariable("YOSHI_BingMapsKey");
 
                 // Set the GitHub Client and set the authentication token from GitHub for the GitHub REST API
                 Client = new GitHubClient(new ProductHeaderValue("yoshi"));
                 Credentials tokenAuth = new Credentials(githubAccessToken);
                 Client.Credentials = tokenAuth;
-
-                // Set the authentication token from Bing Maps used for Geocoding
-                MapService.ServiceToken = bingMapsKey;
             }
             catch (Exception e)
             {

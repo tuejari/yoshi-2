@@ -34,7 +34,10 @@ namespace YOSHI.CharacteristicProcessorNS
                 string committer = commit.Committer.Login;
                 if (committer != null & memberUsernames.Contains(committer))
                 {
-                    mapUserCommitDate.Add(committer, new List<DateTimeOffset>());
+                    if (!mapUserCommitDate.ContainsKey(committer))
+                    {
+                        mapUserCommitDate.Add(committer, new List<DateTimeOffset>());
+                    }
                     mapUserCommitDate[committer].Add(commit.Commit.Committer.Date);
                 }
             }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using YOSHI.CommunityData;
+using YOSHI.DataRetrieverNS;
 
 namespace YOSHI
 {
@@ -21,7 +22,7 @@ namespace YOSHI
         /// </summary>
         /// <exception cref="System.IO.IOException">Thrown when something goes wrong while reading the input or when 
         /// writing to the output file.</exception>
-        public static (List<Community>, int) TakeInput()
+        public static List<Community> TakeInput()
         {
             bool validInFile = false;
             bool validOutFile = false;
@@ -32,23 +33,31 @@ namespace YOSHI
                 // Take and validate the input file
                 while (!validInFile)
                 {
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
                     Console.WriteLine("Please enter the absolute directory of the input file, including filename and " +
                         "its extension.");
+                    Console.ResetColor();
                     inFile = Console.ReadLine();
                     validInFile = File.Exists(inFile);
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
                     Console.WriteLine(validInFile ? "File exists." : "File does not exist, try again:");
+                    Console.ResetColor();
                 }
 
                 // Take the output directory
+                Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine("Please enter the absolute directory of the output file.");
+                Console.ResetColor();
                 string outDir = Console.ReadLine();
                 Directory.CreateDirectory(outDir);
 
                 // Take and validate the input specifying the output file 
                 while (!validOutFile)
                 {
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
                     Console.WriteLine("Please enter the filename of the output file. Do not include an extension, " +
                         "as its extension will be \".csv\"");
+                    Console.ResetColor();
                     string outFilename = Console.ReadLine();
 
                     OutDirFile = outDir + '\\' + outFilename + ".csv";
@@ -63,11 +72,14 @@ namespace YOSHI
                 }
 
                 // https://docs.microsoft.com/en-us/bingmaps/getting-started/bing-maps-dev-center-help/understanding-bing-maps-transactions?redirectedfrom=MSDN
+                Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine("Windows App, Non-profit, and Education keys can make 50,000 requests per 24 hour period.");
                 Console.WriteLine("Please enter the number of Bing Maps requests left.");
+                Console.ResetColor();
                 int bingRequestsLeft = Convert.ToInt32(Console.ReadLine());
+                GeoService.BingRequestsLeft = bingRequestsLeft;
 
-                return (ReadFile(inFile), bingRequestsLeft);
+                return ReadFile(inFile);
             }
             catch (IOException e)
             {
@@ -93,7 +105,7 @@ namespace YOSHI
                 while (csv.Read())
                 {
                     // The CSV file needs to have "RepoName" and "RepoOwner" as headers
-                    Community community = new Community(csv.GetField("RepoName"), csv.GetField("RepoOwner"));
+                    Community community = new Community(csv.GetField("RepoOwner"), csv.GetField("RepoName"));
                     communities.Add(community);
                 }
             }
@@ -134,49 +146,48 @@ namespace YOSHI
         {
             public CommunityMap()
             {
-                // TODO: Order of header fields csvhelper
-                this.Map(m => m.RepoName);
-                this.Map(m => m.RepoOwner);
+                this.Map(m => m.RepoName).Index(0);
+                this.Map(m => m.RepoOwner).Index(1);
 
-                this.Map(m => m.Metrics.Structure.CommonProjects);
-                this.Map(m => m.Metrics.Structure.PullReqInteraction);
-                this.Map(m => m.Metrics.Structure.Followers);
+                this.Map(m => m.Metrics.Structure.CommonProjects).Index(2);
+                this.Map(m => m.Metrics.Structure.PullReqInteraction).Index(3);
+                this.Map(m => m.Metrics.Structure.Followers).Index(4);
 
-                this.Map(m => m.Metrics.Dispersion.MeanGeographicalDistance);
-                //this.Map(m => m.Metrics.Dispersion.HofstedeCulturalDistance);
+                this.Map(m => m.Metrics.Dispersion.MeanGeographicalDistance).Index(5);
+                //this.Map(m => m.Metrics.Dispersion.HofstedeCulturalDistance).Index(6);
 
-                this.Map(m => m.Metrics.Formality.MeanMembershipType);
-                this.Map(m => m.Metrics.Formality.Milestones);
-                this.Map(m => m.Metrics.Formality.Lifetime);
+                this.Map(m => m.Metrics.Formality.MeanMembershipType).Index(7);
+                this.Map(m => m.Metrics.Formality.Milestones).Index(8);
+                this.Map(m => m.Metrics.Formality.Lifetime).Index(9);
 
-                //this.Map(m => m.Metrics.Cohesion.Followers);
+                this.Map(m => m.Metrics.Engagement.MedianActiveMember).Index(10);
+                this.Map(m => m.Metrics.Engagement.MedianWatcher).Index(11);
+                this.Map(m => m.Metrics.Engagement.MedianStargazer).Index(12);
+                this.Map(m => m.Metrics.Engagement.MedianNrPullReqComments).Index(13);
+                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution).Index(14);
+                this.Map(m => m.Metrics.Engagement.MedianCommitDistribution).Index(15);
+                this.Map(m => m.Metrics.Engagement.MedianMonthlyPullCommitCommentsDistribution).Index(16);
 
-                this.Map(m => m.Metrics.Longevity.MeanCommitterLongevity);
+                this.Map(m => m.Metrics.Longevity.MeanCommitterLongevity).Index(17);
 
-                this.Map(m => m.Metrics.Engagement.MedianActiveMember);
-                this.Map(m => m.Metrics.Engagement.MedianWatcher);
-                this.Map(m => m.Metrics.Engagement.MedianStargazer);
-                this.Map(m => m.Metrics.Engagement.MedianNrPullReqComments);
-                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution);
-                this.Map(m => m.Metrics.Engagement.MedianCommitDistribution);
-                this.Map(m => m.Metrics.Engagement.MedianMonthlyPullCommitCommentsDistribution);
+                //this.Map(m => m.Metrics.Cohesion.Followers).Index(18);
 
-                this.Map(m => m.Characteristics.Structure);
-                this.Map(m => m.Characteristics.Dispersion);
-                this.Map(m => m.Characteristics.Formality);
-                this.Map(m => m.Characteristics.Cohesion);
-                this.Map(m => m.Characteristics.Longevity);
-                this.Map(m => m.Characteristics.Engagement);
+                this.Map(m => m.Characteristics.Structure).Index(19);
+                this.Map(m => m.Characteristics.Dispersion).Index(20);
+                this.Map(m => m.Characteristics.Formality).Index(21);
+                this.Map(m => m.Characteristics.Engagement).Index(22);
+                this.Map(m => m.Characteristics.Longevity).Index(23);
+                this.Map(m => m.Characteristics.Cohesion).Index(24);
 
-                this.Map(m => m.Pattern.SocialNetwork);
-                this.Map(m => m.Pattern.FormalGroup);
-                this.Map(m => m.Pattern.ProjectTeam);
-                this.Map(m => m.Pattern.WorkGroup);
-                this.Map(m => m.Pattern.NetworkOfPractice);
-                this.Map(m => m.Pattern.InformalCommunity);
-                this.Map(m => m.Pattern.FormalNetwork);
-                this.Map(m => m.Pattern.InformalNetwork);
-                this.Map(m => m.Pattern.CommunityOfPractice);
+                this.Map(m => m.Pattern.SocialNetwork).Index(25);
+                this.Map(m => m.Pattern.FormalGroup).Index(26);
+                this.Map(m => m.Pattern.ProjectTeam).Index(27);
+                //this.Map(m => m.Pattern.WorkGroup).Index(28);
+                this.Map(m => m.Pattern.NetworkOfPractice).Index(29);
+                this.Map(m => m.Pattern.InformalCommunity).Index(30);
+                this.Map(m => m.Pattern.FormalNetwork).Index(31);
+                this.Map(m => m.Pattern.InformalNetwork).Index(32);
+                this.Map(m => m.Pattern.CommunityOfPractice).Index(33);
             }
         }
     }

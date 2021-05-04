@@ -1,8 +1,9 @@
-﻿using Octokit;
+﻿using Geocoding.Microsoft;
+using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Windows.Services.Maps;
 using YOSHI.Util;
 
 namespace YOSHI.DataRetrieverNS
@@ -10,6 +11,8 @@ namespace YOSHI.DataRetrieverNS
     public static class GeoService
     {
         public static int BingRequestsLeft { get; set; } = 50000;
+        private static readonly BingMapsGeocoder Geocoder =
+            new BingMapsGeocoder(Environment.GetEnvironmentVariable("YOSHI_BingMapsKey"));
 
         /// <summary>
         /// A method that takes a list of users and computes the coordinates for all members. Users that have not 
@@ -38,7 +41,7 @@ namespace YOSHI.DataRetrieverNS
                         }
                     }
                 }
-                catch (ArgumentException e)
+                catch (BingGeocodingException e)
                 {
                     // Continue with the next user if this user was causing an exception
                     Console.ForegroundColor = ConsoleColor.DarkYellow;
@@ -62,27 +65,32 @@ namespace YOSHI.DataRetrieverNS
         /// </summary>
         /// <param name="address">The address of which we want the coordinates.</param>
         /// <returns>A GeoCoordinate containing the longitude and latitude found from the given address.</returns>
-        /// <exception cref="System.ArgumentException">Thrown when the returned status in MapLocationFinderResult is 
+        /// <exception cref="BingGeocodingException">Thrown when the returned status in MapLocationFinderResult is 
         /// anything but "Success".</exception>
-        /// <exception cref="YOSHI.Util.GeocoderRateLimitException">Thrown when the rate limit has been reached.</exception>
+        /// <exception cref="GeocoderRateLimitException">Thrown when the rate limit has been reached.</exception>
         private static async Task<GeoCoordinate> GetLongitudeLatitude(string address)
         {
             if (BingRequestsLeft > 50) // Give ourselves a small buffer to not go over the limit.
             {
                 BingRequestsLeft--;
                 // Note: MapLocationFinder does not throw exceptions, instead it returns a status. 
-                MapLocationFinderResult result = await MapLocationFinder.FindLocationsAsync(address, null, 1);
-                if (result.Status == MapLocationFinderStatus.Success)
+                try
                 {
-                    GeoCoordinate coordinate = new GeoCoordinate(
-                    result.Locations[0].Point.Position.Latitude,
-                    result.Locations[0].Point.Position.Longitude
-                    );
-                    return coordinate;
+                    IEnumerable<BingAddress> resultAddresses = await Geocoder.GeocodeAsync(address);
+                    BingAddress result = resultAddresses.FirstOrDefault();
+                    if (result != null)
+                    {
+                        GeoCoordinate coordinate = new GeoCoordinate(result.Coordinates.Latitude, result.Coordinates.Longitude);
+                        return coordinate;
+                    }
+                    else
+                    {
+                        throw new BingGeocodingException(new Exception("Result for address \"" + address + "\" is null"));
+                    }
                 }
-                else
+                catch (BingGeocodingException)
                 {
-                    throw new ArgumentException("The location finder was unsuccessful and returned status " + result.Status.ToString());
+                    throw;
                 }
             }
             else

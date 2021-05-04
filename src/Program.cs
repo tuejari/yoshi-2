@@ -31,6 +31,7 @@ namespace YOSHI
         static async Task Main()
         {
             // Retrieve the communities through console input handled by the IOModule.
+            List<Community> communities = IOModule.TakeInput();
 
             foreach (Community community in communities)
             {
