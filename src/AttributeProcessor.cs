@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using YOSHI.CommunityData;
+using YOSHI.CommunityData.MetricData;
 using yoshi_revision.src.Util;
 
 namespace YOSHI
@@ -14,23 +15,32 @@ namespace YOSHI
     public static class AttributeProcessor
     {
         /// <summary>
+        /// A method that computes several metrics used to measure community structure and then decides whether a
+        /// community exhibits a structure or not.
+        /// </summary>
+        /// <param name="community">The community for which we need to compute the structure.</param>
+        public static void ComputeStructure(Community community)
+        {
+            GitHubData data = community.Data;
+            // Note: we compute all connections between members to potentially obtain member graphs in the future to
+            // check whether the structure 
+            // TODO: Transform these mappings to a graph structure
+            CommonProjectsConnections(data.MapUserRepositories, community.RepoName, community.Characteristics);
+            FollowConnections(data.MapUserFollowers, data.MapUserFollowing, community.Characteristics);
+            PullReqConnections(data.MapPullReqsToComments, data.MemberUsernames, community.Characteristics);
+        }
+
+        /// <summary>
         /// A method that calls all specific ComputeAttribute methods other than ComputeStructure
         /// </summary>
         /// <param name="community">The community for which we need to compute the attributes.</param>
         public static void ComputeMiscellaneousAttributes(Community community)
         {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// A method that computes several metrics used to measure community structure and then decides whether a
-        /// community exhibits a structure or not.
-        /// </summary>
-        /// <param name="community">The community for which we need to compute the structure.</param>
-        /// <returns>A boolean whether the community exhibits a structure.</returns>
-        public static bool ComputeStructure(Community community)
-        {
-            throw new NotImplementedException();
+            ComputeDispersion(community);
+            ComputeFormality(community);
+            ComputeEngagement(community);
+            ComputeLongevity(community);
+            //ComputeCohesion(community); Not yet implemented
         }
 
         /// <summary>
@@ -39,7 +49,53 @@ namespace YOSHI
         /// <param name="community">The community for which we need to compute the dispersion.</param>
         private static void ComputeDispersion(Community community)
         {
-            throw new NotImplementedException();
+            community.Metrics.Dispersion.MeanGeographicalDistance = MeanGeographicalDistance(community.Data.Coordinates);
+            community.Characteristics.Dispersion = community.Metrics.Dispersion.MeanGeographicalDistance;
+        }
+
+        /// <summary>
+        /// A method that computes several metrics used to measure community formality. It modifies the given community.
+        /// </summary>
+        /// <param name="community">The community for which we need to compute the formality.</param>
+        private static void ComputeFormality(Community community)
+        {
+            Formality formality = community.Metrics.Formality;
+            formality.MeanMembershipType = MeanMembershipType(community.Data.CommitsWithinTimeWindow, community.Data.MemberUsernames);
+            formality.Milestones = community.Data.Milestones.Count;
+            formality.Lifetime = ProjectLifetimeInDays(community.Data.Commits);
+
+            community.Characteristics.Formality = (float)formality.MeanMembershipType / (formality.Milestones / formality.Lifetime);
+        }
+
+        /// <summary>
+        /// A method that computes several metrics used to measure community engagement. It modifies the given community.
+        /// </summary>
+        /// <param name="community">The community for which we need to compute the engagement.</param>
+        private static void ComputeEngagement(Community community)
+        {
+            Engagement engagement = community.Metrics.Engagement;
+            //engagement.MedianNrPullReqComments;
+            //engagement.MedianMonthlyPullCommitCommentsDistribution;
+            //engagement.MedianActiveMember;
+            //engagement.MedianWatcher;
+            //engagement.MedianStargazer;
+            //engagement.MedianCommitDistribution;
+            //engagement.MedianFileCollabDistribution;
+
+            community.Characteristics.Engagement = (float)(engagement.MedianNrPullReqComments + engagement.MedianMonthlyPullCommitCommentsDistribution
+                + engagement.MedianActiveMember + engagement.MedianWatcher + engagement.MedianStargazer + engagement.MedianCommitDistribution
+                + engagement.MedianFileCollabDistribution) / 7;
+        }
+
+        /// <summary>
+        /// A method that computes several metrics used to measure community longevity. It modifies the given community. 
+        /// </summary>
+        /// <param name="community">The community for which we need to compute the longevity.</param>
+        private static void ComputeLongevity(Community community)
+        {
+            community.Metrics.Longevity.MeanCommitterLongevity = MeanCommitterLongevity(community.Data.Commits, community.Data.MemberUsernames);
+
+            community.Characteristics.Longevity = community.Metrics.Longevity.MeanCommitterLongevity;
         }
 
         /// <summary>
@@ -51,75 +107,51 @@ namespace YOSHI
             throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// A method that computes several metrics used to measure community engagement. It modifies the given community.
-        /// </summary>
-        /// <param name="community">The community for which we need to compute the engagement.</param>
-        private static void ComputeEngagement(Community community)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// A method that computes several metrics used to measure community formality. It modifies the given community.
-        /// </summary>
-        /// <param name="community">The community for which we need to compute the formality.</param>
-        private static void ComputeFormality(Community community)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// A method that computes several metrics used to measure community longevity. It modifies the given community. 
-        /// </summary>
-        /// <param name="community">The community for which we need to compute the longevity.</param>
-        private static void ComputeLongevity(Community community)
-        {
-            throw new NotImplementedException();
-        }
-
         // ------------------------------------------------- STRUCTURE -------------------------------------------------
 
         /// <summary>
-        /// We compute the average common projects between all users. 
+        /// We compute the common projects connections between all users. 
         /// </summary>
         /// <param name="mapUserRepositories">A mapping from usernames to the repositories that they worked on.</param>
-        /// <returns>The average number of common projects between users.</returns>
-        private static float AvgCommonProjects(Dictionary<string, IReadOnlyList<Repository>> mapUserRepositories,
-            string repoName)
+        /// <returns>A mapping for each members to a set of other members who worked on a common repository.</returns>
+        private static Dictionary<string, HashSet<string>> CommonProjectsConnections(Dictionary<string, IReadOnlyList<Repository>> mapUserRepositories,
+            string repoName, Characteristics characteristics)
         {
             // Obtain a mapping from all users (usernames) to the names of the repositories they worked on
             Dictionary<string, List<string>> mapUserRepoName = new Dictionary<string, List<string>>();
             foreach (KeyValuePair<string, IReadOnlyList<Repository>> mapUserRepos in mapUserRepositories)
             {
+                mapUserRepoName.Add(mapUserRepos.Key, new List<string>());
                 foreach (Repository repo in mapUserRepos.Value)
                 {
                     if (repo.Name != repoName) // Exclude the repository we are currently analyzing
                     {
-                        mapUserRepoName.Add(mapUserRepos.Key, new List<string>());
                         mapUserRepoName[mapUserRepos.Key].Add(repo.Name);
                     }
                 }
             }
 
             // Find common projects by comparing the names of repositories they worked on
-            float totalCollabProjects = 0F;
+            Dictionary<string, HashSet<string>> commonProjectConnections = new Dictionary<string, HashSet<string>>();
             foreach (KeyValuePair<string, List<string>> firstUser in mapUserRepoName)
             {
-                int nrCommonProjects = 0;
                 foreach (KeyValuePair<string, List<string>> secondUser in mapUserRepoName)
                 {
                     if (firstUser.Key != secondUser.Key)
                     {
                         // We compute the intersections of the list of repositories and then count the number of items
                         IEnumerable<string> commonProjects = firstUser.Value.Intersect(secondUser.Value);
-                        nrCommonProjects += commonProjects.Count();
+                        if (commonProjects.Count() > 0)
+                        {
+                            // Two members have a common repository to which they are contributing, except for the 
+                            // currently analyzed repository. We set this community's structure to true.
+                            characteristics.Structure = true;
+                        }
                     }
                 }
-                totalCollabProjects += nrCommonProjects;
             }
-            float avgCollabProjects = (float)totalCollabProjects / mapUserRepoName.Count;
-            return avgCollabProjects;
+
+            return commonProjectConnections;
         }
 
         /// <summary>
@@ -133,7 +165,8 @@ namespace YOSHI
         /// have been extracted.</returns>
         private static Dictionary<string, HashSet<string>> FollowConnections(
             Dictionary<string, HashSet<string>> mapUserFollowers,
-            Dictionary<string, HashSet<string>> mapUserFollowing)
+            Dictionary<string, HashSet<string>> mapUserFollowing,
+            Characteristics characteristics)
         {
             Dictionary<string, HashSet<string>> followConnections = new Dictionary<string, HashSet<string>>();
 
@@ -141,6 +174,11 @@ namespace YOSHI
             foreach (string user in mapUserFollowers.Keys)
             {
                 followConnections.Add(user, new HashSet<string>(mapUserFollowers[user].Union(mapUserFollowing[user])));
+                if (followConnections[user].Count() > 0)
+                {
+                    // Two members have a follower/following relation. We set this community's structure to true.
+                    characteristics.Structure = true;
+                }
             }
 
             return followConnections;
@@ -152,8 +190,9 @@ namespace YOSHI
         /// <param name="mapPullReqsToComments">A mapping from each pull request to their pull request review comments.</param>
         /// <returns>A mapping for each user to all other users that they're connected to through pull requests.</returns>
         private static Dictionary<string, HashSet<string>> PullReqConnections(
-            Dictionary<PullRequest, IReadOnlyList<PullRequestReviewComment>> mapPullReqsToComments,
-            HashSet<string> members)
+            Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments,
+            HashSet<string> members,
+            Characteristics characteristics)
         {
             Dictionary<string, HashSet<string>> pullReqConnections = new Dictionary<string, HashSet<string>>();
             // Initialize dictionary for every member to an empty set
@@ -163,7 +202,7 @@ namespace YOSHI
             }
 
             // Add the connections for each pull request commenter and author
-            foreach (KeyValuePair<PullRequest, IReadOnlyList<PullRequestReviewComment>> mapPullReqToComments in mapPullReqsToComments)
+            foreach (KeyValuePair<PullRequest, List<PullRequestReviewComment>> mapPullReqToComments in mapPullReqsToComments)
             {
                 string pullReqAuthor = mapPullReqToComments.Key.User.Login;
                 // Make sure that the pull request author is also a member
@@ -179,6 +218,10 @@ namespace YOSHI
                         {
                             pullReqConnections[pullReqCommenter].Add(pullReqAuthor);
                             pullReqConnections[pullReqAuthor].Add(pullReqCommenter);
+
+                            // Two members have had a recent pull request interaction. We set this community's structure
+                            // to true.
+                            characteristics.Structure = true;
                         }
                     }
                 }
@@ -190,18 +233,19 @@ namespace YOSHI
         // ------------------------------------------------- LONGEVITY -------------------------------------------------
 
         /// <summary>
-        /// This method is used to compute the average committer longevity. 
+        /// This method is used to compute the average committer longevity of all members active in the past 3 months. 
         /// </summary>
         /// <param name="commits">A list of commits for the current repository.</param>
+        /// <param name="memberUsernames">A list of usernames of all members.</param>
         /// <returns>The average committer longevity.</returns>
-        private static float AvgCommitterLongevity(IReadOnlyList<GitHubCommit> commits)
+        private static float MeanCommitterLongevity(IReadOnlyList<GitHubCommit> commits, HashSet<string> memberUsernames)
         {
             // We group the list of commits' datetimes per committer
             Dictionary<string, List<DateTimeOffset>> mapUserCommitDate = new Dictionary<string, List<DateTimeOffset>>();
             foreach (GitHubCommit commit in commits)
             {
                 string committer = commit.Committer.Login;
-                if (committer != null)
+                if (committer != null & memberUsernames.Contains(committer))
                 {
                     mapUserCommitDate.Add(committer, new List<DateTimeOffset>());
                     mapUserCommitDate[committer].Add(commit.Commit.Committer.Date);
@@ -232,8 +276,8 @@ namespace YOSHI
                 // Add the difference between committers first and last commits to the total commit longevity
                 totalCommitterLongevityInDays += (dateLastCommit - dateFirstCommit).Days;
             }
-            float avgCommitterLongevity = (float)totalCommitterLongevityInDays / mapUserCommitDate.Count;
-            return avgCommitterLongevity;
+            float meanCommitterLongevity = (float)totalCommitterLongevityInDays / mapUserCommitDate.Count;
+            return meanCommitterLongevity;
         }
 
         // ------------------------------------------------- FORMALITY -------------------------------------------------
@@ -242,9 +286,9 @@ namespace YOSHI
         /// This method computes the average membership type from a list of members.
         /// </summary>
         /// <returns>A float denoting the average membership type.</returns>
-        private static float AvgMembershipType()
+        private static float MeanMembershipType(List<GitHubCommit> commits, HashSet<string> memberUsernames)
         {
-            float avgMembershipType = 0F;
+            float meanMembershipType = 0F;
 
             // TODO: Use another way to determine membership types, because we cannot retrieve collaborators and we 
             // cannot retrieve all contributors (which prevents us from applying alias resolution)
@@ -273,22 +317,10 @@ namespace YOSHI
             //// We remove collaborators that are also marked as contributors from the list of contributors
             //// (collaborators count stronger due to more permissions)
             //List<string> cleanedContributorNames = contributorNames.Except(collaboratorNames).ToList();
-            //float avgMembershipType = (float)(cleanedContributorNames.Count + collaboratorNames.Count * 2) /
+            //float meanMembershipType = (float)(cleanedContributorNames.Count + collaboratorNames.Count * 2) /
             //    (cleanedContributorNames.Count + collaboratorNames.Count);
 
-            return avgMembershipType;
-        }
-
-        /// <summary>
-        /// This method is used to compute the number of project milestones.
-        /// </summary>
-        /// <param name="milestones">A list of milestones from a project.</param>
-        /// <returns>The number of milestones in the given list.</returns>
-        private static int NrProjectMilestones(IReadOnlyList<Milestone> milestones)
-        {
-            // NOTE: This method is only introduced for clarity. If this method did not exist, it may be less visible
-            // compared to other metrics.
-            return milestones.Count;
+            return meanMembershipType;
         }
 
         /// <summary>
@@ -330,7 +362,7 @@ namespace YOSHI
         /// <param name="coordinates">A list of coordinates for which we want to compute the average geographical
         /// distance.</param>
         /// <returns>The average geographical distance between the given list of coordinates.</returns>
-        private static double AvgGeographicalDistance(List<GeoCoordinate> coordinates)
+        private static double MeanGeographicalDistance(List<GeoCoordinate> coordinates)
         {
             // NOTE: threshold (percentage) for number of coordinates should be set in DataRetriever
 

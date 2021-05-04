@@ -6,7 +6,7 @@
     public class Characteristics
     {
         public bool Structure { get; set; }
-        public float Dispersion { get; set; }
+        public double Dispersion { get; set; }
         public float Formality { get; set; }
         public float Engagement { get; set; }
         public float Longevity { get; set; }

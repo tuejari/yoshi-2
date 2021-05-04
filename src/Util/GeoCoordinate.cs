@@ -132,9 +132,12 @@ namespace yoshi_revision.src.Util
 	     */
         public static GeoCoordinate FromString(string latLonString)
         {
-            String[] splitted = Regex.Split(latLonString, "[,;:\\s]");
+            string[] splitted = Regex.Split(latLonString, "[,;:\\s]");
             if (splitted.Length != 2)
+            {
                 throw new ArgumentException("cannot read coordinate, not a valid format");
+            }
+
             double latitude = Convert.ToDouble(splitted[0]);
             double longitude = Convert.ToDouble(splitted[1]);
             try
@@ -271,8 +274,11 @@ namespace yoshi_revision.src.Util
         public static double SphericalDistance(GeoCoordinate gc1, GeoCoordinate gc2)
         {
             if (gc1 == null || gc2 == null)
+            {
                 throw new ArgumentException(
                         "The GeoCoordinates for distance calculations may not be null.");
+            }
+
             return SphericalDistance(gc1.GetLongitude(), gc1.GetLatitude(), gc2.GetLongitude(), gc2.GetLatitude());
         }
 
@@ -369,29 +375,24 @@ namespace yoshi_revision.src.Util
             double sinU2 = Math.Sin(U2), cosU2 = Math.Cos(U2);
 
             double lambda = L, lambdaP, iterLimit = 100;
-
-            double cosSqAlpha = 0, sinSigma = 0, cosSigma = 0, cos2SigmaM = 0, sigma = 0, sinLambda = 0, sinAlpha = 0, cosLambda = 0;
+            double cosSqAlpha, sinSigma, cosSigma, cos2SigmaM, sigma;
             do
             {
-                sinLambda = Math.Sin(lambda);
-                cosLambda = Math.Cos(lambda);
+                double sinLambda = Math.Sin(lambda);
+                double cosLambda = Math.Cos(lambda);
                 sinSigma = Math.Sqrt((cosU2 * sinLambda) * (cosU2 * sinLambda)
                         + (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda)
                         * (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda));
                 if (sinSigma == 0)
+                {
                     return 0; // co-incident points
+                }
+
                 cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda;
                 sigma = Math.Atan2(sinSigma, cosSigma);
-                sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma;
+                double sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma;
                 cosSqAlpha = 1 - sinAlpha * sinAlpha;
-                if (cosSqAlpha != 0)
-                {
-                    cos2SigmaM = cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha;
-                }
-                else
-                {
-                    cos2SigmaM = 0;
-                }
+                cos2SigmaM = cosSqAlpha != 0 ? cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha : 0;
                 double C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha));
                 lambdaP = lambda;
                 lambda = L
@@ -403,7 +404,9 @@ namespace yoshi_revision.src.Util
             } while (Math.Abs(lambda - lambdaP) > 1e-12 && --iterLimit > 0);
 
             if (iterLimit == 0)
+            {
                 return 0; // formula failed to converge
+            }
 
             double uSq = cosSqAlpha
                     * (Math.Pow(EQUATORIALRADIUS, 2) - Math.Pow(POLARRADIUS, 2))
@@ -499,7 +502,7 @@ namespace yoshi_revision.src.Util
             return (Math.PI / 180) * angle;
         }
 
-        public override bool Equals(Object obj)
+        public override bool Equals(object obj)
         {
             if (this == obj)
             {
@@ -553,7 +556,7 @@ namespace yoshi_revision.src.Util
             return result;
         }
 
-        public override String ToString()
+        public override string ToString()
         {
             return "latitude: " + this.latitude + ", longitude: " + this.longitude;
         }

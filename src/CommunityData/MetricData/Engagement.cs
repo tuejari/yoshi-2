@@ -8,13 +8,12 @@ namespace YOSHI.CommunityData.MetricData
     /// </summary>
     public class Engagement
     {
-        public Dictionary<User, float> ActiveMembers { get; set; }
-        public Dictionary<User, float> Watchers { get; set; }
-        public Dictionary<User, float> Stargazers { get; set; }
-        public Dictionary<User, float> NrPullReqComments { get; set; }
-        // NOTE: All distributions are monthly
-        public Dictionary<User, float> FileCollabDistribution { get; set; }
-        public Dictionary<User, float> CommitDistribution { get; set; }
-        public Dictionary<User, float> PullReqCommitDistribution { get; set; }
+        public float MedianNrPullReqComments { get; set; }
+        public float MedianMonthlyPullCommitCommentsDistribution { get; set; }
+        public float MedianActiveMember { get; set; }
+        public float MedianWatcher { get; set; }
+        public float MedianStargazer { get; set; }
+        public float MedianCommitDistribution { get; set; }
+        public float MedianFileCollabDistribution { get; set; }
     }
 }

@@ -5,6 +5,6 @@
     /// </summary>
     public class Longevity
     {
-        public float CommitterLongevity { get; set; }
+        public float MeanCommitterLongevity { get; set; }
     }
 }

@@ -5,7 +5,7 @@
     /// </summary>
     public class Dispersion
     {
-        public float GeographicalDistanceMap { get; set; }
-        public float HofstedeCulturalDistance { get; set; }
+        public double MeanGeographicalDistance { get; set; }
+        //public float HofstedeCulturalDistance { get; set; }
     }
 }

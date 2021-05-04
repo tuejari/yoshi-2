@@ -111,8 +111,7 @@ namespace YOSHI
         /// </summary>
         public static void WriteToFile(Community community)
         {
-            List<Community> communities = new List<Community>();
-            communities.Add(community);
+            List<Community> communities = new List<Community> { community };
 
             // Append to the file.
             CsvConfiguration config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -136,48 +135,48 @@ namespace YOSHI
             public CommunityMap()
             {
                 // TODO: Order of header fields csvhelper
-                Map(m => m.RepoName);
-                Map(m => m.RepoOwner);
+                this.Map(m => m.RepoName);
+                this.Map(m => m.RepoOwner);
 
-                Map(m => m.Metrics.Structure.CommonProjects);
-                Map(m => m.Metrics.Structure.PullReqInteraction);
-                Map(m => m.Metrics.Structure.Followers);
+                this.Map(m => m.Metrics.Structure.CommonProjects);
+                this.Map(m => m.Metrics.Structure.PullReqInteraction);
+                this.Map(m => m.Metrics.Structure.Followers);
 
-                Map(m => m.Metrics.Dispersion.GeographicalDistanceMap);
-                Map(m => m.Metrics.Dispersion.HofstedeCulturalDistance);
+                this.Map(m => m.Metrics.Dispersion.MeanGeographicalDistance);
+                //this.Map(m => m.Metrics.Dispersion.HofstedeCulturalDistance);
 
-                Map(m => m.Metrics.Formality.MembershipType);
-                Map(m => m.Metrics.Formality.Milestones);
-                Map(m => m.Metrics.Formality.Lifetime);
+                this.Map(m => m.Metrics.Formality.MeanMembershipType);
+                this.Map(m => m.Metrics.Formality.Milestones);
+                this.Map(m => m.Metrics.Formality.Lifetime);
 
-                Map(m => m.Metrics.Cohesion.Followers);
+                //this.Map(m => m.Metrics.Cohesion.Followers);
 
-                Map(m => m.Metrics.Longevity.CommitterLongevity);
+                this.Map(m => m.Metrics.Longevity.MeanCommitterLongevity);
 
-                Map(m => m.Metrics.Engagement.ActiveMembers);
-                Map(m => m.Metrics.Engagement.Watchers);
-                Map(m => m.Metrics.Engagement.Stargazers);
-                Map(m => m.Metrics.Engagement.NrPullReqComments);
-                Map(m => m.Metrics.Engagement.FileCollabDistribution);
-                Map(m => m.Metrics.Engagement.CommitDistribution);
-                Map(m => m.Metrics.Engagement.PullReqCommitDistribution);
+                this.Map(m => m.Metrics.Engagement.MedianActiveMember);
+                this.Map(m => m.Metrics.Engagement.MedianWatcher);
+                this.Map(m => m.Metrics.Engagement.MedianStargazer);
+                this.Map(m => m.Metrics.Engagement.MedianNrPullReqComments);
+                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution);
+                this.Map(m => m.Metrics.Engagement.MedianCommitDistribution);
+                this.Map(m => m.Metrics.Engagement.MedianMonthlyPullCommitCommentsDistribution);
 
-                Map(m => m.Characteristics.Structure);
-                Map(m => m.Characteristics.Dispersion);
-                Map(m => m.Characteristics.Formality);
-                Map(m => m.Characteristics.Cohesion);
-                Map(m => m.Characteristics.Longevity);
-                Map(m => m.Characteristics.Engagement);
+                this.Map(m => m.Characteristics.Structure);
+                this.Map(m => m.Characteristics.Dispersion);
+                this.Map(m => m.Characteristics.Formality);
+                this.Map(m => m.Characteristics.Cohesion);
+                this.Map(m => m.Characteristics.Longevity);
+                this.Map(m => m.Characteristics.Engagement);
 
-                Map(m => m.Pattern.SocialNetwork);
-                Map(m => m.Pattern.FormalGroup);
-                Map(m => m.Pattern.ProjectTeam);
-                Map(m => m.Pattern.WorkGroup);
-                Map(m => m.Pattern.NetworkOfPractice);
-                Map(m => m.Pattern.InformalCommunity);
-                Map(m => m.Pattern.FormalNetwork);
-                Map(m => m.Pattern.InformalNetwork);
-                Map(m => m.Pattern.CommunityOfPractice);
+                this.Map(m => m.Pattern.SocialNetwork);
+                this.Map(m => m.Pattern.FormalGroup);
+                this.Map(m => m.Pattern.ProjectTeam);
+                this.Map(m => m.Pattern.WorkGroup);
+                this.Map(m => m.Pattern.NetworkOfPractice);
+                this.Map(m => m.Pattern.InformalCommunity);
+                this.Map(m => m.Pattern.FormalNetwork);
+                this.Map(m => m.Pattern.InformalNetwork);
+                this.Map(m => m.Pattern.CommunityOfPractice);
             }
         }
     }

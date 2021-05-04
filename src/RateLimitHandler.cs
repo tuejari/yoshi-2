@@ -71,8 +71,8 @@ namespace YOSHI
             Func<string, string, PullRequestRequest, ApiOptions, Task<T>> func,
             string repoOwner,
             string repoName,
-            ApiOptions maxBatchSize,
-            PullRequestRequest state)
+            PullRequestRequest state,
+            ApiOptions maxBatchSize)
         {
             for (int i = 0; i < 3; i++)
             {
@@ -158,6 +158,7 @@ namespace YOSHI
                 }
                 catch (RateLimitExceededException)
                 {
+                    Console.WriteLine("It does throw rate limit exceeded exceptions");
                     // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
                     WaitUntilReset();
                 }

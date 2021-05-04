@@ -5,7 +5,7 @@
     /// </summary>
     public class Formality
     {
-        public float MembershipType { get; set; }
+        public float MeanMembershipType { get; set; }
         public float Milestones { get; set; }
         public float Lifetime { get; set; }
 

@@ -121,14 +121,13 @@
     <Compile Include="src\PatternProcessor.cs" />
     <Compile Include="src\Program.cs" />
     <Compile Include="src\RateLimitHandler.cs" />
+    <Compile Include="src\Util\GeocoderRateLimitException.cs" />
     <Compile Include="src\Util\GeoCoordinate.cs" />
-    <Compile Include="src\Util\InvalidRepositoryException.cs" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
       <SubType>Designer</SubType>
     </AppxManifest>
-    <None Include=".editorconfig" />
     <None Include="yoshi-revision_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>

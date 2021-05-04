@@ -6,18 +6,21 @@
     /// </summary>
     public class Community
     {
-        public string RepoName { get; }
         public string RepoOwner { get; }
+        public string RepoName { get; }
         public GitHubData Data { get; }
         public Metrics Metrics { get; }
         public Characteristics Characteristics { get; }
         public Pattern Pattern { get; set; }
 
-        public Community(string name, string owner)
+        public Community(string owner, string name)
         {
-            this.RepoName = name;
             this.RepoOwner = owner;
+            this.RepoName = name;
+            this.Data = new GitHubData();
+            this.Metrics = new Metrics();
+            this.Characteristics = new Characteristics();
+            this.Pattern = new Pattern();
         }
-
     }
 }

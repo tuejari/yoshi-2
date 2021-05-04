@@ -29,57 +29,90 @@ namespace YOSHI
         static async Task Main()
         {
             // Retrieve the communities through console input handled by the IOModule.
-            (List<Community> communities, int bingRequestsLeft) = IOModule.TakeInput();
-            DataRetriever.BingRequestsLeft = bingRequestsLeft;
 
-            //foreach (Community community in communities)
-            //{
-            //    try
-            //    {
-            //        Console.WriteLine("------------------------------------------------"); // Line to distinguish between communities
-            //        Console.WriteLine("Started processing community {0}, url: {1}", community.RepoOwner, community.RepoName);
-            //        // Retrieving GitHub data needed to compute whether the community exhibits a structure
-            //        Console.WriteLine("Retrieving GitHub data needed for computing structure...");
-            //        await DataRetriever.RetrieveStructureData(community);
+            foreach (Community community in communities)
+            {
+                try
+                {
+                    Console.WriteLine("------------------------------------------------"); // Line to distinguish between communities
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("Started processing community {0} from {1}", community.RepoName, community.RepoOwner);
+                    Console.ResetColor();
 
-            //        // If the community exhibits a structure then:
-            //        if (AttributeProcessor.ComputeStructure(community))
-            //        {
-            //            // Miscellaneous characteristics are: dispersion, formality, cohesion, engagement, longevity
-            //            Console.WriteLine("Retrieving GitHub data needed for miscellaneous characteristics...");
-            //            await DataRetriever.RetrieveMiscellaneousData(community);
+                    // Retrieving GitHub data needed to compute whether the community is valid (i.e., it has at least
+                    // 100 commits (all time), it has at least 10 members active in the last 90 days, it has at least
+                    // 1 milestone (all time), and it has enough location data to compute dispersion. 
+                    Console.WriteLine("Retrieving GitHub data needed for checking validity...");
+                    bool valid = await DataRetriever.RetrieveDataAndCheckValidity(community);
+                    if (!valid)
+                    {
+                        // TODO: specify why it is not valid
+                        // Skip this repository if it is not valid
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("Community {0} from {1} is not valid", community.RepoName, community.RepoOwner);
+                        Console.ResetColor();
+                        continue;
+                    }
 
-            //            Console.WriteLine("Computing miscellaneous characteristics...");
-            //            AttributeProcessor.ComputeMiscellaneousAttributes(community);
+                    // Retrieving GitHub data needed to compute whether the community exhibits a structure
+                    Console.WriteLine("Retrieving GitHub data needed for computing structure...");
+                    await DataRetriever.RetrieveStructureData(community);
 
-            //            Console.WriteLine("Determining community pattern...");
-            //            PatternProcessor.ComputePattern(community);
-            //        }
-            //        else
-            //        {
-            //            // The community exhibits no structure, hence we cannot compute a pattern. Thus we skip computing 
-            //            // all other characteristics.
-            //            Console.WriteLine("This community does not exhibit a structure.");
-            //        }
+                    Console.WriteLine("Computing community structure...");
+                    AttributeProcessor.ComputeStructure(community);
 
-            //        Console.WriteLine("Writing community data to file...");
-            //        IOModule.WriteToFile(community);
+                    // If the community exhibits a structure then:
+                    if (community.Characteristics.Structure)
+                    {
+                        Console.WriteLine("Community exhibits a structure...");
 
-            //        Console.WriteLine("Finished processing community from {0}, url: {1}", community.RepoOwner, community.RepoName);
-            //    }
-            //    catch (InvalidRepositoryException e)
-            //    {
-            //        Console.WriteLine("Community {0} does not satisfy the minimum requirements. {1}", community.RepoName, e);
-            //        continue;
-            //    }
-            //    catch (Exception)
-            //    {
-            //        // We want to output the number of Bing Maps Requests left, since it can take hours for Bing Maps Requests to update
-            //        Console.WriteLine("Something went wrong for {0}", community.RepoName);
-            //        continue;
-            //    }
-            //}
-            //Console.WriteLine("There are still {0} Bing Maps Requests left", DataRetriever.BingRequestsLeft);
+                        // Miscellaneous characteristics are: dispersion, formality, cohesion, engagement, longevity
+                        Console.WriteLine("Retrieving GitHub data needed for miscellaneous characteristics...");
+                        await DataRetriever.RetrieveMiscellaneousData(community);
+
+                        Console.WriteLine("Computing miscellaneous characteristics...");
+                        AttributeProcessor.ComputeMiscellaneousAttributes(community);
+
+                        Console.WriteLine("Determining community pattern...");
+                        PatternProcessor.ComputePattern(community);
+                    }
+                    else
+                    {
+                        // The community exhibits no structure, hence we cannot compute a pattern. Thus we skip computing 
+                        // all other characteristics.
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("This community does not exhibit a structure.");
+                        Console.ResetColor();
+                    }
+
+                    Console.WriteLine("Writing community data to file...");
+                    IOModule.WriteToFile(community);
+
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("Finished processing community from {0}, url: {1}", community.RepoOwner, community.RepoName);
+                    Console.ResetColor();
+                }
+                catch (GeocoderRateLimitException e)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Something went wrong for {0}", community.RepoName);
+                    Console.WriteLine(e.Message);
+                    Console.ResetColor();
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    // We want to output the number of Bing Maps Requests left, since it can take hours for Bing Maps Requests to update
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Something went wrong for {0}", community.RepoName);
+                    Console.WriteLine(e.Message);
+                    Console.ResetColor();
+                    continue;
+                }
+            }
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("There are still {0} Bing Maps Requests left", DataRetriever.BingRequestsLeft);
+            Console.ResetColor();
         }
     }
 }
