@@ -104,7 +104,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="src\AttributeProcessor.cs" />
+    <Compile Include="src\CharacteristicProcessor\CharacteristicProcessor.cs" />
+    <Compile Include="src\CharacteristicProcessor\CohesionProcessor.cs" />
+    <Compile Include="src\CharacteristicProcessor\DispersionProcessor.cs" />
+    <Compile Include="src\CharacteristicProcessor\EngagementProcessor.cs" />
+    <Compile Include="src\CharacteristicProcessor\FormalityProcessor.cs" />
+    <Compile Include="src\CharacteristicProcessor\LongevityProcessor.cs" />
+    <Compile Include="src\CharacteristicProcessor\StructureProcessor.cs" />
     <Compile Include="src\CommunityData\Characteristics.cs" />
     <Compile Include="src\CommunityData\Community.cs" />
     <Compile Include="src\CommunityData\GitHubData.cs" />
@@ -116,11 +122,12 @@
     <Compile Include="src\CommunityData\MetricData\Structure.cs" />
     <Compile Include="src\CommunityData\Metrics.cs" />
     <Compile Include="src\CommunityData\Pattern.cs" />
-    <Compile Include="src\DataRetriever.cs" />
+    <Compile Include="src\DataRetriever\DataRetriever.cs" />
+    <Compile Include="src\DataRetriever\GeoService.cs" />
     <Compile Include="src\IOModule.cs" />
     <Compile Include="src\PatternProcessor.cs" />
     <Compile Include="src\Program.cs" />
-    <Compile Include="src\RateLimitHandler.cs" />
+    <Compile Include="src\DataRetriever\GitHubRateLimitHandler.cs" />
     <Compile Include="src\Util\GeocoderRateLimitException.cs" />
     <Compile Include="src\Util\GeoCoordinate.cs" />
   </ItemGroup>

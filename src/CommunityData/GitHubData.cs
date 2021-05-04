@@ -1,6 +1,6 @@
 ﻿using Octokit;
 using System.Collections.Generic;
-using yoshi_revision.src.Util;
+using YOSHI.Util;
 
 namespace YOSHI.CommunityData
 {

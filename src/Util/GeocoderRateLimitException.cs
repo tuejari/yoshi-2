@@ -1,6 +1,10 @@
 ﻿using System;
-namespace yoshi_revision.src.Util
+
+namespace YOSHI.Util
 {
+    /// <summary>
+    /// Class used to identify the rate limit exception from Bing Maps API
+    /// </summary>
     public class GeocoderRateLimitException : Exception
     {
         public GeocoderRateLimitException()

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 
-namespace yoshi_revision.src.Util
+namespace YOSHI.Util
 {
 
     /**

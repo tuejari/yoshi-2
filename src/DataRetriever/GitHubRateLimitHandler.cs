@@ -3,9 +3,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace YOSHI
+namespace YOSHI.DataRetrieverNS
 {
-    public static class RateLimitHandler
+    public static class GitHubRateLimitHandler
     {
 
         // AUXILIARY: Methods used to delegate GitHub API calls and handling of rate limits. 

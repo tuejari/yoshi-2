@@ -4,9 +4,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Windows.Services.Maps;
 using YOSHI.CommunityData;
-using yoshi_revision.src.Util;
 
-namespace YOSHI
+namespace YOSHI.DataRetrieverNS
 {
     /// <summary>
     /// This class is responsible for retrieving data from GitHub. 
@@ -16,7 +15,7 @@ namespace YOSHI
         public static readonly GitHubClient Client;
         // Default 24-hour operations with a basic Windows App, Non-profit, and Education key.
         // Info about rate limiting: https://docs.microsoft.com/en-us/bingmaps/getting-started/bing-maps-api-best-practices
-        public static int BingRequestsLeft { get; set; } = 50000;
+
         private static readonly ApiOptions MaxSizeBatches = new ApiOptions // allows us to fetch with 100 at a time
         {
             PageSize = 100
@@ -63,12 +62,12 @@ namespace YOSHI
             {
                 await GitHubRequestsRemaining();
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("Bing Maps API requests remaining: {0}", BingRequestsLeft);
+                Console.WriteLine("Bing Maps API requests remaining: {0}", GeoService.BingRequestsLeft);
                 Console.ResetColor();
 
                 // There must be at least 100 commits
                 Console.WriteLine("Retrieving all commits...");
-                data.Commits = await RateLimitHandler.Delegate(Client.Repository.Commit.GetAll, repoOwner, repoName, MaxSizeBatches);
+                data.Commits = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.GetAll, repoOwner, repoName, MaxSizeBatches);
                 if (data.Commits.Count < 100)
                 {
                     return false;
@@ -87,7 +86,7 @@ namespace YOSHI
 
                 // There must be at least one milestone
                 Console.WriteLine("Retrieving milestones...");
-                data.Milestones = await RateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
+                data.Milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
                 if (data.Milestones.Count < 1)
                 {
                     return false;
@@ -95,9 +94,9 @@ namespace YOSHI
 
                 // There must be enough location data available to compute dispersion. TODO: Determine the threshold (maybe as percentage)
                 Console.WriteLine("Retrieving coordinates...");
-                data.Coordinates = await RetrieveMemberCoordinates(data.Members, repoName);
+                data.Coordinates = await GeoService.RetrieveMemberCoordinates(data.Members, repoName);
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("Bing Maps API requests remaining: {0}", BingRequestsLeft);
+                Console.WriteLine("Bing Maps API requests remaining: {0}", GeoService.BingRequestsLeft);
                 Console.ResetColor();
                 if (data.Coordinates.Count < 2)
                 {
@@ -158,9 +157,9 @@ namespace YOSHI
             try
             {
                 // NOTE: Commit comments commit_id == commit SHA
-                data.CommitComments = await RateLimitHandler.Delegate(Client.Repository.Comment.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
-                data.Watchers = await RateLimitHandler.Delegate(Client.Activity.Watching.GetAllWatchers, repoOwner, repoName, MaxSizeBatches);
-                data.Stargazers = await RateLimitHandler.Delegate(Client.Activity.Starring.GetAllStargazers, repoOwner, repoName, MaxSizeBatches); // TODO: Check whether we should get those with timestamps or not
+                data.CommitComments = await GitHubRateLimitHandler.Delegate(Client.Repository.Comment.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
+                data.Watchers = await GitHubRateLimitHandler.Delegate(Client.Activity.Watching.GetAllWatchers, repoOwner, repoName, MaxSizeBatches);
+                data.Stargazers = await GitHubRateLimitHandler.Delegate(Client.Activity.Starring.GetAllStargazers, repoOwner, repoName, MaxSizeBatches); // TODO: Check whether we should get those with timestamps or not
             }
             catch (Exception e)
             {
@@ -234,7 +233,7 @@ namespace YOSHI
             {
                 try
                 {
-                    User user = await RateLimitHandler.Delegate(Client.User.Get, username);
+                    User user = await GitHubRateLimitHandler.Delegate(Client.User.Get, username);
                     members.Add(user);
                     memberUsernames.Add(username);
                 }
@@ -247,84 +246,7 @@ namespace YOSHI
             return (members, memberUsernames);
         }
 
-        /// <summary>
-        /// A method that takes a list of users and computes the coordinates for all members. Users that have not 
-        /// specified their locations or cause exceptions are skipped.
-        /// </summary>
-        /// <param name="members">A list of members to compute the coordinates from</param>
-        /// <param name="repoName">The repository name, used in exception handling</param>
-        /// <returns>A list of coordinates for the passed list of members</returns>
-        /// <exception cref="yoshi_revision.src.Util.GeocoderRateLimitException">Thrown when the Bing Rate Limit is exceeded.</exception>
-        private static async Task<List<GeoCoordinate>> RetrieveMemberCoordinates(List<User> members, string repoName)
-        {
-            List<GeoCoordinate> coordinates = new List<GeoCoordinate>();
 
-            // NOTE: We loop over all user objects instead of usernames to access location data
-            foreach (User member in members)
-            {
-                // Retrieve the member's coordinates
-                try
-                {
-                    if (member.Location != null)
-                    {
-                        GeoCoordinate coordinate = await GetLongitudeLatitude(member.Location);
-                        if (coordinate != null)
-                        {
-                            coordinates.Add(coordinate);
-                        }
-                    }
-                }
-                catch (ArgumentException e)
-                {
-                    // Continue with the next user if this user was causing an exception
-                    Console.ForegroundColor = ConsoleColor.DarkYellow;
-                    Console.WriteLine("Could not retrieve the location from {0} in repo {1}", member.Login, repoName);
-                    Console.WriteLine(e.Message);
-                    Console.ResetColor();
-                    continue;
-                }
-                catch (GeocoderRateLimitException)
-                {
-                    throw;
-                }
-            }
-            return coordinates;
-        }
-
-        /// <summary>
-        /// This method uses a Geocoding API to perform forward geocoding, i.e., enter an address and obtain coordinates.
-        /// 
-        /// Bing Maps TOU: https://www.microsoft.com/en-us/maps/product/terms-april-2011
-        /// </summary>
-        /// <param name="address">The address of which we want the coordinates.</param>
-        /// <returns>A GeoCoordinate containing the longitude and latitude found from the given address.</returns>
-        /// <exception cref="System.ArgumentException">Thrown when the returned status in MapLocationFinderResult is anything but "Success".</exception>
-        /// <exception cref="yoshi_revision.src.Util.GeocoderRateLimitException">Thrown when the rate limit has been reached.</exception>
-        private static async Task<GeoCoordinate> GetLongitudeLatitude(string address)
-        {
-            if (BingRequestsLeft > 50) // Give ourselves a small buffer to not go over the limit.
-            {
-                BingRequestsLeft--;
-                // Note: MapLocationFinder does not throw exceptions, instead it returns a status. 
-                MapLocationFinderResult result = await MapLocationFinder.FindLocationsAsync(address, null, 1);
-                if (result.Status == MapLocationFinderStatus.Success)
-                {
-                    GeoCoordinate coordinate = new GeoCoordinate(
-                    result.Locations[0].Point.Position.Latitude,
-                    result.Locations[0].Point.Position.Longitude
-                    );
-                    return coordinate;
-                }
-                else
-                {
-                    throw new ArgumentException("The location finder was unsuccessful and returned status " + result.Status.ToString());
-                }
-            }
-            else
-            {
-                throw new GeocoderRateLimitException("No more Bing Requests left.");
-            }
-        }
 
         /// <summary>
         /// For all repository members we retrieve their followers (i.e., who's following them) and following 
@@ -344,7 +266,7 @@ namespace YOSHI
             foreach (string username in memberUsernames)
             {
                 // Get the given user's followers
-                IReadOnlyList<User> followers = await RateLimitHandler.Delegate(Client.User.Followers.GetAll, username, MaxSizeBatches);
+                IReadOnlyList<User> followers = await GitHubRateLimitHandler.Delegate(Client.User.Followers.GetAll, username, MaxSizeBatches);
                 // Limit the following users to members that are also part of the current repository
                 HashSet<string> followersNames = new HashSet<string>();
                 foreach (User follower in followers)
@@ -356,7 +278,7 @@ namespace YOSHI
                 }
 
                 // Get the given user's users that they're following
-                IReadOnlyList<User> following = await RateLimitHandler.Delegate(Client.User.Followers.GetAllFollowing, username, MaxSizeBatches);
+                IReadOnlyList<User> following = await GitHubRateLimitHandler.Delegate(Client.User.Followers.GetAllFollowing, username, MaxSizeBatches);
                 // Limit the following users to members that are also part of the current repository
                 HashSet<string> followingNames = new HashSet<string>();
                 foreach (User followingUser in following)
@@ -369,7 +291,7 @@ namespace YOSHI
 
                 // TODO: Check whether these repositories are all repositories that the user has at least one commit to the main branch / gh-pages
                 IReadOnlyList<Repository> repositories =
-                    await RateLimitHandler.Delegate(Client.Repository.GetAllForUser, username, MaxSizeBatches);
+                    await GitHubRateLimitHandler.Delegate(Client.Repository.GetAllForUser, username, MaxSizeBatches);
 
                 // Store all user data
                 mapUserFollowers.Add(username, followersNames);
@@ -394,7 +316,7 @@ namespace YOSHI
             Console.WriteLine("Retrieving pull requests...");
             PullRequestRequest stateFilter = new PullRequestRequest { State = ItemStateFilter.All };
             IReadOnlyList<PullRequest> pullRequests =
-                await RateLimitHandler.Delegate(Client.PullRequest.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
+                await GitHubRateLimitHandler.Delegate(Client.PullRequest.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
             List<PullRequest> pullRequestsWithinWindow = new List<PullRequest>();
 
             // Extract only the pull requests that fall within the 3-month time window (approximately 90 days)
@@ -415,7 +337,7 @@ namespace YOSHI
             foreach (PullRequest pullRequest in pullRequestsWithinWindow)
             {
                 IReadOnlyList<PullRequestReviewComment> pullRequestComments =
-                    await RateLimitHandler.Delegate(Client.PullRequest.ReviewComment.GetAll, repoOwner, repoName, pullRequest.Number, MaxSizeBatches);
+                    await GitHubRateLimitHandler.Delegate(Client.PullRequest.ReviewComment.GetAll, repoOwner, repoName, pullRequest.Number, MaxSizeBatches);
 
                 // Filter out all comments that are not within the time window, do not have a commit author, or are not 
                 // considered current members (i.e., have not committed in the last 90 days). 

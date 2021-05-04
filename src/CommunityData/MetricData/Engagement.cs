@@ -1,7 +1,4 @@
-﻿using Octokit;
-using System.Collections.Generic;
-
-namespace YOSHI.CommunityData.MetricData
+﻿namespace YOSHI.CommunityData.MetricData
 {
     /// <summary>
     /// This class is used to store values for metrics used to compute a community's engagement level.

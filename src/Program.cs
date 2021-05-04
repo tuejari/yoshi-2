@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using YOSHI.CharacteristicProcessorNS;
 using YOSHI.CommunityData;
-using yoshi_revision.src.Util;
+using YOSHI.DataRetrieverNS;
+using YOSHI.Util;
 
 namespace YOSHI
 {
@@ -59,7 +61,7 @@ namespace YOSHI
                     await DataRetriever.RetrieveStructureData(community);
 
                     Console.WriteLine("Computing community structure...");
-                    AttributeProcessor.ComputeStructure(community);
+                    CharacteristicProcessor.ComputeStructure(community);
 
                     // If the community exhibits a structure then:
                     if (community.Characteristics.Structure)
@@ -71,7 +73,7 @@ namespace YOSHI
                         await DataRetriever.RetrieveMiscellaneousData(community);
 
                         Console.WriteLine("Computing miscellaneous characteristics...");
-                        AttributeProcessor.ComputeMiscellaneousAttributes(community);
+                        CharacteristicProcessor.ComputeMiscellaneousCharacteristics(community);
 
                         Console.WriteLine("Determining community pattern...");
                         PatternProcessor.ComputePattern(community);
@@ -111,7 +113,7 @@ namespace YOSHI
                 }
             }
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("There are still {0} Bing Maps Requests left", DataRetriever.BingRequestsLeft);
+            Console.WriteLine("There are still {0} Bing Maps Requests left", GeoService.BingRequestsLeft);
             Console.ResetColor();
         }
     }
