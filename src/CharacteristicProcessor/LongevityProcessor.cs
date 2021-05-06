@@ -26,7 +26,7 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <param name="memberUsernames">A list of usernames of all members.</param>
         /// <returns>The average committer longevity.</returns>
         private static float MeanCommitterLongevity(IReadOnlyList<GitHubCommit> commits, HashSet<string> memberUsernames)
-        { 
+        {
             // We group the list of commits' datetimes per committer
             Dictionary<string, List<DateTime>> mapUserCommitDate = new Dictionary<string, List<DateTime>>();
             foreach (GitHubCommit commit in commits)

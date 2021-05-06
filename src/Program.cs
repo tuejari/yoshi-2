@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using YOSHI.CharacteristicProcessorNS;
 using YOSHI.CommunityData;
 using YOSHI.DataRetrieverNS;
-using YOSHI.Util;
+using YOSHI.DataRetrieverNS.Geocoding;
 
 namespace YOSHI
 {

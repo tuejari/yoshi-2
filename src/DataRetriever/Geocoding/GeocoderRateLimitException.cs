@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace YOSHI.Util
+namespace YOSHI.DataRetrieverNS.Geocoding
 {
     /// <summary>
     /// Class used to identify the rate limit exception from Bing Maps API

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using YOSHI.CommunityData;
-using YOSHI.DataRetrieverNS;
+using YOSHI.DataRetrieverNS.Geocoding;
 
 namespace YOSHI
 {

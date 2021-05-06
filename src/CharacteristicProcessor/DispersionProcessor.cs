@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using YOSHI.CommunityData;
-using YOSHI.Util;
+using YOSHI.DataRetrieverNS.Geocoding;
 
 namespace YOSHI.CharacteristicProcessorNS
 {

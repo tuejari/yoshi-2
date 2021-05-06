@@ -1,6 +1,6 @@
 ﻿using Octokit;
 using System.Collections.Generic;
-using YOSHI.Util;
+using YOSHI.DataRetrieverNS.Geocoding;
 
 namespace YOSHI.CommunityData
 {

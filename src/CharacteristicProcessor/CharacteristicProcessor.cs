@@ -20,8 +20,8 @@ namespace YOSHI.CharacteristicProcessorNS
             ComputeDispersion(community);
             Console.WriteLine("Computing community formality...");
             ComputeFormality(community);
-            //Console.WriteLine("Computing community engagement...");
-            //ComputeEngagement(community);
+            Console.WriteLine("Computing community engagement...");
+            ComputeEngagement(community);
             Console.WriteLine("Computing community longevity...");
             ComputeLongevity(community);
             //Console.WriteLine("Computing community cohesion...");

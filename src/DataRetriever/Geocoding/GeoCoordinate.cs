@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 
-namespace YOSHI.Util
+namespace YOSHI.DataRetrieverNS.Geocoding
 {
 
     /**

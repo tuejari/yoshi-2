@@ -5,12 +5,12 @@
     /// </summary>
     public class Engagement
     {
-        public float MedianNrPullReqComments { get; set; }
-        public float MedianMonthlyPullCommitCommentsDistribution { get; set; }
-        public float MedianActiveMember { get; set; }
-        public float MedianWatcher { get; set; }
-        public float MedianStargazer { get; set; }
-        public float MedianCommitDistribution { get; set; }
-        public float MedianFileCollabDistribution { get; set; }
+        public double MedianNrPullReqComments { get; set; }
+        public double MedianMonthlyPullCommitCommentsDistribution { get; set; }
+        public double MedianActiveMember { get; set; }
+        public double MedianWatcher { get; set; }
+        public double MedianStargazer { get; set; }
+        public double MedianCommitDistribution { get; set; }
+        public double MedianFileCollabDistribution { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using YOSHI.CommunityData;
+using YOSHI.DataRetrieverNS.Geocoding;
 
 namespace YOSHI.DataRetrieverNS
 {
@@ -177,7 +178,7 @@ namespace YOSHI.DataRetrieverNS
             {
                 try
                 {
-                    if (CheckWithinTimeWindow(commit.Commit.Committer.Date))
+                    if (Util.CheckWithinTimeWindow(commit.Commit.Committer.Date))
                     {
                         commitsWithinWindow.Add(commit);
                     }
@@ -210,7 +211,7 @@ namespace YOSHI.DataRetrieverNS
                         usernames.Add(commit.Committer.Login);
                     }
                     // Check that author date also falls within the time window before adding the author in the list of members
-                    if (commit.Author != null && commit.Author.Login != null && CheckWithinTimeWindow(commit.Commit.Author.Date))
+                    if (commit.Author != null && commit.Author.Login != null && Util.CheckWithinTimeWindow(commit.Commit.Author.Date))
                     {
                         usernames.Add(commit.Author.Login);
                     }
@@ -241,8 +242,6 @@ namespace YOSHI.DataRetrieverNS
             return (members, memberUsernames);
         }
 
-
-
         /// <summary>
         /// For all repository members we retrieve their followers (i.e., who's following them) and following 
         /// (i.e., who they're following), we retrieve the repositories they worked on, and we retrieve their coordinates .
@@ -260,29 +259,13 @@ namespace YOSHI.DataRetrieverNS
 
             foreach (string username in memberUsernames)
             {
-                // Get the given user's followers
+                // Get the given user's followers, limited to members that are also part of the current repository
                 IReadOnlyList<User> followers = await GitHubRateLimitHandler.Delegate(Client.User.Followers.GetAll, username, MaxSizeBatches);
-                // Limit the following users to members that are also part of the current repository
-                HashSet<string> followersNames = new HashSet<string>();
-                foreach (User follower in followers)
-                {
-                    if (follower.Login != null && memberUsernames.Contains(follower.Login))
-                    {
-                        followersNames.Add(follower.Login);
-                    }
-                }
+                HashSet<string> followersNames = Util.ConvertUsersToUsernames(followers, memberUsernames);
 
-                // Get the given user's users that they're following
+                // Get the given user's users that they're following, limited to members that are also part of the current repository
                 IReadOnlyList<User> following = await GitHubRateLimitHandler.Delegate(Client.User.Followers.GetAllFollowing, username, MaxSizeBatches);
-                // Limit the following users to members that are also part of the current repository
-                HashSet<string> followingNames = new HashSet<string>();
-                foreach (User followingUser in following)
-                {
-                    if (followingUser.Login != null && memberUsernames.Contains(followingUser.Login))
-                    {
-                        followingNames.Add(followingUser.Login);
-                    }
-                }
+                HashSet<string> followingNames = Util.ConvertUsersToUsernames(following, memberUsernames);
 
                 // TODO: Check whether these repositories are all repositories that the user has at least one commit to the main branch / gh-pages
                 IReadOnlyList<Repository> repositories =
@@ -319,7 +302,7 @@ namespace YOSHI.DataRetrieverNS
             Console.WriteLine("Extracting pull requests within last 90 days...");
             foreach (PullRequest pullRequest in pullRequests)
             {
-                if (CheckWithinTimeWindow(pullRequest.UpdatedAt))
+                if (Util.CheckWithinTimeWindow(pullRequest.UpdatedAt))
                 {
                     pullRequestsWithinWindow.Add(pullRequest);
                 }
@@ -340,7 +323,7 @@ namespace YOSHI.DataRetrieverNS
                 List<PullRequestReviewComment> pullReqCommentsWithinWindow = new List<PullRequestReviewComment>();
                 foreach (PullRequestReviewComment comment in pullRequestComments)
                 {
-                    if (CheckWithinTimeWindow(comment.UpdatedAt) && comment.User != null && comment.User.Login != null && memberUsernames.Contains(comment.User.Login))
+                    if (Util.CheckWithinTimeWindow(comment.UpdatedAt) && comment.User != null && comment.User.Login != null && memberUsernames.Contains(comment.User.Login))
                     {
                         pullReqCommentsWithinWindow.Add(comment);
                     }
@@ -350,29 +333,6 @@ namespace YOSHI.DataRetrieverNS
             }
 
             return mapPullReqsToComments;
-        }
-
-        /// <summary>
-        /// A method that takes a DateTimeOffset object and checks whether it is within the 3 months (90 days) snapshot 
-        /// window. This window ends at today's midnight time and starts at midnight 90 days prior.
-        /// </summary>
-        /// <param name="dateTime">A DateTimeOffset object</param>
-        /// <returns>Whether the DateTimeOffset object falls within the time window.</returns>
-        /// <exception cref="System.NullReferenceException">Thrown when the datetime parameter is null.</exception>
-        private static bool CheckWithinTimeWindow(DateTimeOffset dateTime)
-        {
-            // We set the date time offset window for the 3 months earlier from now (approximated using 90 days)
-            DateTime EndDate = new DateTimeOffset(DateTime.Today).Date;
-            DateTime StartDate = EndDate.AddDays(-90).Date;
-            try
-            {
-                DateTime date = dateTime.Date; // Extract the date from the datetime object
-                return date >= StartDate && date < EndDate;
-            }
-            catch
-            {
-                throw;
-            }
         }
 
         /// <summary>

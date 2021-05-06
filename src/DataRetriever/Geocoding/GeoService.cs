@@ -4,9 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using YOSHI.Util;
 
-namespace YOSHI.DataRetrieverNS
+namespace YOSHI.DataRetrieverNS.Geocoding
 {
     public static class GeoService
     {
@@ -21,7 +20,7 @@ namespace YOSHI.DataRetrieverNS
         /// <param name="members">A list of members to compute the coordinates from</param>
         /// <param name="repoName">The repository name, used in exception handling</param>
         /// <returns>A list of coordinates for the passed list of members</returns>
-        /// <exception cref="YOSHI.Util.GeocoderRateLimitException">Thrown when the Bing Rate Limit is exceeded.</exception>
+        /// <exception cref="YOSHI.Geocoding.GeocoderRateLimitException">Thrown when the Bing Rate Limit is exceeded.</exception>
         public static async Task<List<GeoCoordinate>> RetrieveMemberCoordinates(List<User> members, string repoName)
         {
             List<GeoCoordinate> coordinates = new List<GeoCoordinate>();
