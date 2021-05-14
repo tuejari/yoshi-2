@@ -49,24 +49,5 @@ namespace YOSHI
             }
             return names;
         }
-
-        /// <summary>
-        /// Given a list of floats, this method sorts the list in place and then computes the average median. 
-        /// I.e., the median whenever the list has an odd number of elements, the average of the middle 2 elements if 
-        /// the list has an even number of elements.
-        /// </summary>
-        /// <param name="list">The list to obtain the median from. Note: Will be modified in place.</param>
-        /// <returns>The median from the given list.</returns>
-        public static double ComputeMedian(List<int> list)
-        {
-            list.Sort();
-            return list.Count % 2 == 0 ? (list[(list.Count / 2) - 1] + list[list.Count / 2]) / 2.0 : list[list.Count / 2];
-        }
-
-        public static double ComputeMedian(List<float> list)
-        {
-            list.Sort();
-            return list.Count % 2 == 0 ? (list[(list.Count / 2) - 1] + list[list.Count / 2]) / 2.0 : list[list.Count / 2];
-        }
     }
 }

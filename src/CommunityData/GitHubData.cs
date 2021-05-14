@@ -1,6 +1,6 @@
-﻿using Octokit;
+﻿using Geocoding.Microsoft;
+using Octokit;
 using System.Collections.Generic;
-using YOSHI.DataRetrieverNS.Geocoding;
 
 namespace YOSHI.CommunityData
 {
@@ -31,6 +31,6 @@ namespace YOSHI.CommunityData
         public IReadOnlyList<User> Watchers { get; set; }
         public IReadOnlyList<User> Stargazers { get; set; }
 
-        public List<GeoCoordinate> Coordinates { get; set; }
+        public List<BingAddress> Addresses { get; set; }
     }
 }

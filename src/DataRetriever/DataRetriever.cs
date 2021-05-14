@@ -89,12 +89,12 @@ namespace YOSHI.DataRetrieverNS
                 }
 
                 // There must be enough location data available to compute dispersion. TODO: Determine the threshold (maybe as percentage)
-                Console.WriteLine("Retrieving coordinates...");
-                data.Coordinates = await GeoService.RetrieveMemberCoordinates(data.Members, repoName);
+                Console.WriteLine("Retrieving addresses...");
+                data.Addresses = await GeoService.RetrieveMemberAddresses(data.Members, repoName);
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("Bing Maps API requests remaining: {0}", GeoService.BingRequestsLeft);
                 Console.ResetColor();
-                if (data.Coordinates.Count < 2)
+                if (data.Addresses.Count < 2)
                 {
                     return false;
                 }
@@ -244,7 +244,7 @@ namespace YOSHI.DataRetrieverNS
 
         /// <summary>
         /// For all repository members we retrieve their followers (i.e., who's following them) and following 
-        /// (i.e., who they're following), we retrieve the repositories they worked on, and we retrieve their coordinates .
+        /// (i.e., who they're following), and we retrieve the repositories they worked on.
         /// </summary>
         /// <param name="data">The data object of the community in which we store all retrieved GitHub data.</param>
         private static async Task<(

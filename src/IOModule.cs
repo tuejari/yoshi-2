@@ -153,8 +153,8 @@ namespace YOSHI
                 this.Map(m => m.Metrics.Structure.PullReqInteraction).Index(3);
                 this.Map(m => m.Metrics.Structure.Followers).Index(4);
 
-                this.Map(m => m.Metrics.Dispersion.MeanGeographicalDistance).Index(5);
-                //this.Map(m => m.Metrics.Dispersion.HofstedeCulturalDistance).Index(6);
+                this.Map(m => m.Metrics.Dispersion.VarianceGeographicalDistance).Index(5);
+                this.Map(m => m.Metrics.Dispersion.VarianceHofstedeCulturalDistance).Index(6);
 
                 this.Map(m => m.Metrics.Formality.MeanMembershipType).Index(7);
                 this.Map(m => m.Metrics.Formality.Milestones).Index(8);

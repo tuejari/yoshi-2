@@ -5,7 +5,8 @@
     /// </summary>
     public class Dispersion
     {
-        public double MeanGeographicalDistance { get; set; }
-        //public float HofstedeCulturalDistance { get; set; }
+        // Note: population variance
+        public double VarianceGeographicalDistance { get; set; }
+        public double VarianceHofstedeCulturalDistance { get; set; }
     }
 }

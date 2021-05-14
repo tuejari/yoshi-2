@@ -62,7 +62,7 @@ namespace YOSHI.CharacteristicProcessorNS
 
             // Extract all values per user into a single list and compute the median from that list
             List<int> userValues = mapUserPullReqComments.Values.ToList();
-            return Util.ComputeMedian(userValues);
+            return Statistics.ComputeMedian(userValues);
         }
 
         /// <summary>
@@ -144,7 +144,7 @@ namespace YOSHI.CharacteristicProcessorNS
                     userValues.Add(0);
                 }
             }
-            return Util.ComputeMedian(userValues);
+            return Statistics.ComputeMedian(userValues);
         }
     }
 }

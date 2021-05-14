@@ -1,5 +1,4 @@
-﻿using System;
-using YOSHI.CommunityData;
+﻿using YOSHI.CommunityData;
 
 namespace YOSHI
 {
