@@ -6,6 +6,9 @@ namespace YOSHI
 {
     public static class Util
     {
+        public static readonly DateTime EndDateTimeWindow = new DateTimeOffset(DateTime.Today).Date;
+        public static readonly DateTime StartDateTimeWindow = EndDateTimeWindow.AddDays(-90).Date;
+
         /// <summary>
         /// A method that takes a DateTimeOffset object and checks whether it is within the specified time window x number 
         /// of days (Default: 3 months,  i.e., x = 90 days). This window ends at today's midnight time and starts at 
@@ -17,12 +20,11 @@ namespace YOSHI
         public static bool CheckWithinTimeWindow(DateTimeOffset dateTime, int days = 90)
         {
             // We set the date time offset window for the 3 months earlier from now (approximated using 90 days)
-            DateTime EndDate = new DateTimeOffset(DateTime.Today).Date;
-            DateTime StartDate = EndDate.AddDays(-days).Date;
+            DateTime startDate = EndDateTimeWindow.AddDays(-days).Date;
             try
             {
                 DateTime date = dateTime.Date; // Extract the date from the datetime object
-                return date >= StartDate && date < EndDate;
+                return date >= startDate && date < EndDateTimeWindow;
             }
             catch
             {

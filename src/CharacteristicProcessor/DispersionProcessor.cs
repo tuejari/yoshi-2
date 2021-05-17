@@ -22,6 +22,7 @@ namespace YOSHI.CharacteristicProcessorNS
             // Compute the variance of all geographical distances
             List<double> distances = ComputeGeographicalDistances(addresses);
             double varianceGeographicalDistance = Statistics.ComputeVariance(distances);
+            community.Metrics.Dispersion.VarianceGeographicalDistance = varianceGeographicalDistance;
 
             // Compute the variance for four Hofstede indices
             (List<double> pdis, List<double> idvs, List<double> mass, List<double> uais) = ComputeHofstedeIndices(addresses);
@@ -32,10 +33,10 @@ namespace YOSHI.CharacteristicProcessorNS
 
             // Determine the average of the variances to obtain the variance of cultural distance
             double varianceCulturalDistance = (variancePdi + varianceIdv + varianceMas + varianceUai) / 4;
+            community.Metrics.Dispersion.VarianceHofstedeCulturalDistance = varianceCulturalDistance;
 
             // Determine the global dispersion
-            double geodispersion = Math.Sqrt((varianceGeographicalDistance + varianceCulturalDistance) / 2);
-            community.Characteristics.Dispersion = geodispersion;
+            community.Characteristics.Dispersion = Math.Sqrt((varianceGeographicalDistance + varianceCulturalDistance) / 2);
         }
 
         /// <summary>
@@ -51,10 +52,10 @@ namespace YOSHI.CharacteristicProcessorNS
             List<double> distances = new List<double>();
 
             // Compute the medium distance for each distinct pair of addresses in the given list of addresses
-            for (int i = 0; i < addresses.Count-1; i++)
+            for (int i = 0; i < addresses.Count - 1; i++)
             {
                 Location coordinateA = addresses[i].Coordinates;
-                for (int j = i+1; j < addresses.Count; j++)
+                for (int j = i + 1; j < addresses.Count; j++)
                 {
                     Location coordinateB = addresses[j].Coordinates;
                     // NOTE: the DistanceBetween method computes spherical distance

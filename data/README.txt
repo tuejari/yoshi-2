@@ -13,5 +13,5 @@ Source: https://www.hofstede-insights.com/country-comparison/
 Hofstede Insights - Manual 2021-05-13
 
 This dataset was manually extracted from the Country Comparison Tool. This dataset was also implemented in YOSHI. We made the following changes to the country names to fit the Bing Maps responses: 
-Chech Republic 	--> Chechia
+Czech Republic 	--> Czechia
 Hong Kong 	--> Hong Kong sar

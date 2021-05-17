@@ -179,17 +179,18 @@ namespace YOSHI.DataRetrieverNS
             DateTimeOffset? whenDoesTheLimitReset = rateLimit?.Reset;
             if (whenDoesTheLimitReset != null)
             {
+                DateTimeOffset limitReset = (DateTimeOffset)whenDoesTheLimitReset;
                 timespan = (DateTimeOffset)whenDoesTheLimitReset - DateTimeOffset.Now;
                 timespan = timespan.Add(TimeSpan.FromSeconds(30)); // Add 30 seconds to the timespan
-                Console.WriteLine("Waiting until: " + whenDoesTheLimitReset.ToString());
+                Console.WriteLine("Waiting until: " + limitReset.AddSeconds(30).DateTime.ToLocalTime().ToString());
             }
             else
             {
                 // If we don't know the reset time, we wait the default time of 1 hour
-                Console.WriteLine("Waiting until: " + DateTimeOffset.Now.AddHours(1));
+                Console.WriteLine("Waiting until: " + DateTimeOffset.Now.DateTime.ToLocalTime().AddHours(1));
             }
             Thread.Sleep(timespan); // Wait until the rate limit resets
-            Console.WriteLine("Done waiting for the rate limit reset, continuing now: " + DateTimeOffset.Now.ToString());
+            Console.WriteLine("Done waiting for the rate limit reset, continuing now: " + DateTimeOffset.Now.DateTime.ToLocalTime().ToString());
         }
     }
 }

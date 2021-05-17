@@ -75,14 +75,9 @@ namespace YOSHI.DataRetrieverNS.Geocoding
                 {
                     IEnumerable<BingAddress> resultAddresses = await Geocoder.GeocodeAsync(githubLocation);
                     BingAddress result = resultAddresses.FirstOrDefault();
-                    if (result != null && result.CountryRegion != null)
-                    {
-                        return result;
-                    }
-                    else
-                    {
-                        throw new BingGeocodingException(new Exception("Result for address \"" + githubLocation + "\" is null"));
-                    }
+                    return result != null && result.CountryRegion != null
+                        ? result
+                        : throw new BingGeocodingException(new Exception("Result for address \"" + githubLocation + "\" is null"));
                 }
                 catch (BingGeocodingException)
                 {

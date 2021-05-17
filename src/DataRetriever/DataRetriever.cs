@@ -153,9 +153,13 @@ namespace YOSHI.DataRetrieverNS
             try
             {
                 // NOTE: Commit comments commit_id == commit SHA
+                // TODO: Filter non-members from commit comments, watchers and stargazers
+                Console.WriteLine("Retrieving commit comments...");
                 data.CommitComments = await GitHubRateLimitHandler.Delegate(Client.Repository.Comment.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
+                Console.WriteLine("Retrieving watchers...");
                 data.Watchers = await GitHubRateLimitHandler.Delegate(Client.Activity.Watching.GetAllWatchers, repoOwner, repoName, MaxSizeBatches);
-                data.Stargazers = await GitHubRateLimitHandler.Delegate(Client.Activity.Starring.GetAllStargazers, repoOwner, repoName, MaxSizeBatches); // TODO: Check whether we should get those with timestamps or not
+                Console.WriteLine("Retrieving stargazers...");
+                data.Stargazers = await GitHubRateLimitHandler.Delegate(Client.Activity.Starring.GetAllStargazers, repoOwner, repoName, MaxSizeBatches);
             }
             catch (Exception e)
             {
@@ -178,7 +182,7 @@ namespace YOSHI.DataRetrieverNS
             {
                 try
                 {
-                    if (Util.CheckWithinTimeWindow(commit.Commit.Committer.Date))
+                    if (Util.CheckWithinTimeWindow(commit.Commit.Committer.Date) && commit.Committer.Login != null)
                     {
                         commitsWithinWindow.Add(commit);
                     }
@@ -194,7 +198,8 @@ namespace YOSHI.DataRetrieverNS
 
         /// <summary>
         /// This method retrieves all User objects and usernames for all committers and commit authors in the last 90
-        /// days.
+        /// days. Note: It is possible that open pull request authors have commits on their own forks. These are not detected 
+        /// as members as they have not yet made a contribution. 
         /// </summary>
         /// <param name="commits">A list of commits</param>
         /// <returns>A tuple containing a list of users and a list of usernames.</returns>
@@ -206,10 +211,8 @@ namespace YOSHI.DataRetrieverNS
             {
                 try
                 {
-                    if (commit.Committer != null && commit.Committer.Login != null)
-                    {
-                        usernames.Add(commit.Committer.Login);
-                    }
+                    // Note: all commits in timewindow have already been filtered such that committers have usernames
+                    usernames.Add(commit.Committer.Login);
                     // Check that author date also falls within the time window before adding the author in the list of members
                     if (commit.Author != null && commit.Author.Login != null && Util.CheckWithinTimeWindow(commit.Commit.Author.Date))
                     {
@@ -282,7 +285,8 @@ namespace YOSHI.DataRetrieverNS
 
         /// <summary>
         /// This method retrieves all pull requests for a repository, and then retrieves the pull request review comments
-        /// for each pull request and maps them in a dictionary.
+        /// for each pull request and maps them in a dictionary. Filters all pull requests and pull request comments by 
+        /// non-committers, i.e., users that are not considered members.
         /// </summary>
         /// <param name="repoOwner">Repository owner</param>
         /// <param name="repoName">Repository name</param>
@@ -302,7 +306,8 @@ namespace YOSHI.DataRetrieverNS
             Console.WriteLine("Extracting pull requests within last 90 days...");
             foreach (PullRequest pullRequest in pullRequests)
             {
-                if (Util.CheckWithinTimeWindow(pullRequest.UpdatedAt))
+                if (Util.CheckWithinTimeWindow(pullRequest.UpdatedAt) && pullRequest.User != null
+                    && pullRequest.User.Login != null && memberUsernames.Contains(pullRequest.User.Login))
                 {
                     pullRequestsWithinWindow.Add(pullRequest);
                 }
