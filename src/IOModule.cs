@@ -163,7 +163,7 @@ namespace YOSHI
                 this.Map(m => m.Metrics.Engagement.MedianActiveMember).Index(10);
                 this.Map(m => m.Metrics.Engagement.MedianWatcher).Index(11);
                 this.Map(m => m.Metrics.Engagement.MedianStargazer).Index(12);
-                this.Map(m => m.Metrics.Engagement.MedianNrPullReqComments).Index(13);
+                this.Map(m => m.Metrics.Engagement.MedianNrCommentsPerPullReq).Index(13);
                 this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution).Index(14);
                 this.Map(m => m.Metrics.Engagement.MedianCommitDistribution).Index(15);
                 this.Map(m => m.Metrics.Engagement.MedianMonthlyPullCommitCommentsDistribution).Index(16);

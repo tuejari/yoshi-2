@@ -5,7 +5,7 @@
     /// </summary>
     public class Engagement
     {
-        public double MedianNrPullReqComments { get; set; }
+        public double MedianNrCommentsPerPullReq { get; set; }
         public double MedianMonthlyPullCommitCommentsDistribution { get; set; }
         public double MedianActiveMember { get; set; }
         public double MedianWatcher { get; set; }

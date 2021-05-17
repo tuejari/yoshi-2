@@ -16,53 +16,40 @@ namespace YOSHI.CharacteristicProcessorNS
         {
             GitHubData data = community.Data;
             Engagement engagement = community.Metrics.Engagement;
-            List<PullRequestReviewComment> pullRequestComments = data.MapPullReqsToComments.Values              // To get just the List<PullRequestReviewComment>s
-                                                                                           .SelectMany(x => x)  // Flatten
-                                                                                           .ToList();           // Transform to a list
-            engagement.MedianNrPullReqComments = MedianNrPullReqComments(pullRequestComments, data.MemberUsernames);
+            engagement.MedianNrCommentsPerPullReq =
+                MedianNrCommentsPerPullReq(data.MapPullReqsToComments, data.MemberUsernames);
             //engagement.MedianMonthlyPullCommitCommentsDistribution;
             engagement.MedianActiveMember = MedianActiveMember(data.CommitsWithinTimeWindow, data.MemberUsernames);
             engagement.MedianWatcher = MedianWatcher(data.Watchers, data.MemberUsernames);
             engagement.MedianStargazer = MedianStargazer(data.Stargazers, data.MemberUsernames);
-            //engagement.MedianCommitDistribution;
-            //engagement.MedianFileCollabDistribution;
 
             community.Characteristics.Engagement =
-                (float)(engagement.MedianNrPullReqComments + engagement.MedianMonthlyPullCommitCommentsDistribution
+                (float)(engagement.MedianNrCommentsPerPullReq + engagement.MedianMonthlyPullCommitCommentsDistribution
                 + engagement.MedianActiveMember + engagement.MedianWatcher + engagement.MedianStargazer
                 + engagement.MedianCommitDistribution + engagement.MedianFileCollabDistribution) / 7;
         }
 
         /// <summary>
         /// Given a list pull requests and a list of members within the snapshot period, compute the median number of 
-        /// pull request comments for each members. I.e., compute for each member the number of pull request comments, 
-        /// and compute the median. 
+        /// pull request comments per pull request for each member. I.e., compute for each member the average number of 
+        /// pull request comments per pull request, and compute the median. 
         /// </summary>
-        /// <param name="pullRequestComments">A list of pull request comments.</param>
+        /// <param name="mapPullReqsToComments">A mapping from pull requests to their corresponding comments.</param>
         /// <param name="members">A set of members within the last 90 days.</param>
         /// <returns>The median value of pull request review comments per member.</returns>
-        private static double MedianNrPullReqComments(List<PullRequestReviewComment> pullRequestComments, HashSet<string> members)
+        private static double MedianNrCommentsPerPullReq(Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments, HashSet<string> members)
         {
-            // Initialize a mapping for each user to the number of pull request comments (initialized at 0)
-            Dictionary<string, int> mapUserPullReqComments = new Dictionary<string, int>();
-            foreach (string member in members)
-            {
-                mapUserPullReqComments.Add(member, 0);
-            }
+            // Compute the comments per pull request
+            // Note: the pull requests and comments not from members and not within the snapshot period have been
+            // filtered in the DataRetriever.
+            List<int> commentsPerPullReq = mapPullReqsToComments.Values
+                                                  .Select(list => list.Count())
+                                                  .ToList();
 
-            // Loop over comments and increment each commenter's comment number 
-            foreach (PullRequestReviewComment comment in pullRequestComments)
-            {
-                User user = comment.User;
-                if (user != null && user.Login != null && members.Contains(user.Login))
-                {
-                    mapUserPullReqComments[user.Login]++;
-                }
-            }
-
-            // Extract all values per user into a single list and compute the median from that list
-            List<int> userValues = mapUserPullReqComments.Values.ToList();
-            return Statistics.ComputeMedian(userValues);
+            // From the comments per Pull Request, compute the median
+            // Re-architecting Software Forges... "Finally, in average, we observed that the number of discussions,
+            // comments or threads spreading from a thread or discussion is comprised between 0 or 1."
+            return Statistics.ComputeMedian(commentsPerPullReq);
         }
 
         /// <summary>
