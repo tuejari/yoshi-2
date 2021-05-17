@@ -114,6 +114,31 @@ namespace YOSHI.DataRetrieverNS
             throw new Exception("Failed too many times to retrieve GitHub data.");
         }
 
+        /// <param name="commitRequest">An extra paramater to specify the tree path when retrieving commits. 
+        /// This allows us to retrieve all commits affecting a specific file.</param>
+        public async static Task<T> Delegate<T>(
+            Func<string, string, CommitRequest, ApiOptions, Task<T>> func,
+            string repoOwner,
+            string repoName,
+            CommitRequest commitRequest,
+            ApiOptions maxBatchSize)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    Task<T> task = func(repoOwner, repoName, commitRequest, maxBatchSize);
+                    return await task;
+                }
+                catch (RateLimitExceededException)
+                {
+                    // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
+                    WaitUntilReset();
+                }
+            }
+            throw new Exception("Failed too many times to retrieve GitHub data.");
+        }
+
         /// <summary>
         /// This method is used to delegate the GitHub API requests. It handles the rate limit. 
         /// </summary>

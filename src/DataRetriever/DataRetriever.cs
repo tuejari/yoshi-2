@@ -72,6 +72,15 @@ namespace YOSHI.DataRetrieverNS
                 Console.WriteLine("Extracting commits within last 90 days...");
                 data.CommitsWithinTimeWindow = ExtractCommitsWithinTimeWindow(data.Commits);
 
+                Console.WriteLine("Retrieve commit details..."); // Necessary to retrieve what files were changed each commit
+                List<GitHubCommit> detailedCommitsWithinTimeWindow = new List<GitHubCommit>();
+                foreach (GitHubCommit commit in data.CommitsWithinTimeWindow)
+                {
+                    GitHubCommit detailedCommit = await Client.Repository.Commit.Get(repoOwner, repoName, commit.Sha);
+                    detailedCommitsWithinTimeWindow.Add(detailedCommit);
+                }
+                data.CommitsWithinTimeWindow = detailedCommitsWithinTimeWindow;
+
                 // There must be at least 10 members (active in the last 90 days)
                 Console.WriteLine("Retrieving all members...");
                 (data.Members, data.MemberUsernames) = await GetAllMembers(data.CommitsWithinTimeWindow);
