@@ -63,14 +63,14 @@ namespace YOSHI.DataRetrieverNS
 
                 // There must be at least 100 commits
                 Console.WriteLine("Retrieving all commits...");
-                data.Commits = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.GetAll, repoOwner, repoName, MaxSizeBatches);
-                if (data.Commits.Count < 100)
+                IReadOnlyList<GitHubCommit> commits = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.GetAll, repoOwner, repoName, MaxSizeBatches);
+                if (commits.Count < 100)
                 {
                     return false;
                 }
 
-                Console.WriteLine("Extracting commits within last 90 days...");
-                data.CommitsWithinTimeWindow = ExtractCommitsWithinTimeWindow(data.Commits);
+                Console.WriteLine("Filtering commits...");
+                data.CommitsWithinTimeWindow = Filters.FilterCommits(commits);
 
                 Console.WriteLine("Retrieve commit details..."); // Necessary to retrieve what files were changed each commit
                 List<GitHubCommit> detailedCommitsWithinTimeWindow = new List<GitHubCommit>();
@@ -79,15 +79,21 @@ namespace YOSHI.DataRetrieverNS
                     GitHubCommit detailedCommit = await Client.Repository.Commit.Get(repoOwner, repoName, commit.Sha);
                     detailedCommitsWithinTimeWindow.Add(detailedCommit);
                 }
-                data.CommitsWithinTimeWindow = detailedCommitsWithinTimeWindow;
+                Console.WriteLine("Filtering detailed commits...");
+                data.CommitsWithinTimeWindow = Filters.FilterDetailedCommits(detailedCommitsWithinTimeWindow);
+
+                Console.WriteLine("Extracting usernames from commits...");
+                data.MemberUsernames = Filters.ExtractUsernamesFromCommits(data.CommitsWithinTimeWindow);
 
                 // There must be at least 10 members (active in the last 90 days)
-                Console.WriteLine("Retrieving all members...");
-                (data.Members, data.MemberUsernames) = await GetAllMembers(data.CommitsWithinTimeWindow);
+                Console.WriteLine("Retrieving user data...");
+                (data.Members, data.MemberUsernames) = await RetrieveMembers(data.MemberUsernames);
                 if (data.MemberUsernames.Count < 10)
                 {
                     return false;
                 }
+                Console.WriteLine("Filtering commits from non-members...");
+                data.Commits = Filters.FilterAllCommits(commits, data.MemberUsernames);
 
                 // There must be at least one milestone
                 Console.WriteLine("Retrieving milestones...");
@@ -135,9 +141,13 @@ namespace YOSHI.DataRetrieverNS
             {
                 Console.WriteLine("Retrieving data per member...");
                 (data.MapUserFollowers, data.MapUserFollowing, data.MapUserRepositories)
-                    = await RetrieveDataPerMember(data.MemberUsernames);
+                    = await RetrieveDataPerMember(repoName, data.MemberUsernames);
 
-                data.MapPullReqsToComments = await MapPullRequestComments(repoOwner, repoName, data.MemberUsernames);
+                Console.WriteLine("Retrieving pull requests...");
+                List<PullRequest> pullRequestsWithinWindow = await RetrievePullRequests(repoOwner, repoName, data.MemberUsernames);
+
+                Console.WriteLine("Retrieving pull request comments within last 90 days per pull request...");
+                data.MapPullReqsToComments = await RetrieveCommentsPerPullRequest(repoOwner, repoName, pullRequestsWithinWindow, data.MemberUsernames);
             }
             catch (Exception e)
             {
@@ -161,14 +171,21 @@ namespace YOSHI.DataRetrieverNS
             GitHubData data = community.Data;
             try
             {
-                // NOTE: Commit comments commit_id == commit SHA
-                // TODO: Filter non-members from commit comments, watchers and stargazers
+                // A member is considered active if they made a commit in the last 30 days
+                Console.WriteLine("Extracting active users...");
+                data.ActiveMembers = Filters.ExtractUsernamesFromCommits(data.CommitsWithinTimeWindow, 30);
+
                 Console.WriteLine("Retrieving commit comments...");
-                data.CommitComments = await GitHubRateLimitHandler.Delegate(Client.Repository.Comment.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
+                IReadOnlyList<CommitComment> commitComments = await GitHubRateLimitHandler.Delegate(Client.Repository.Comment.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
+                data.CommitComments = Filters.FilterComments(commitComments, data.MemberUsernames);
+
                 Console.WriteLine("Retrieving watchers...");
-                data.Watchers = await GitHubRateLimitHandler.Delegate(Client.Activity.Watching.GetAllWatchers, repoOwner, repoName, MaxSizeBatches);
+                IReadOnlyList<User> watchers = await GitHubRateLimitHandler.Delegate(Client.Activity.Watching.GetAllWatchers, repoOwner, repoName, MaxSizeBatches);
+                data.Watchers = Filters.ExtractUsernamesFromUsers(watchers, data.MemberUsernames);
+
                 Console.WriteLine("Retrieving stargazers...");
-                data.Stargazers = await GitHubRateLimitHandler.Delegate(Client.Activity.Starring.GetAllStargazers, repoOwner, repoName, MaxSizeBatches);
+                IReadOnlyList<User> stargazers = await GitHubRateLimitHandler.Delegate(Client.Activity.Starring.GetAllStargazers, repoOwner, repoName, MaxSizeBatches);
+                data.Stargazers = Filters.ExtractUsernamesFromUsers(stargazers, data.MemberUsernames);
             }
             catch (Exception e)
             {
@@ -179,71 +196,23 @@ namespace YOSHI.DataRetrieverNS
         }
 
         /// <summary>
-        /// Extracts commits committed within the time window of 3 months (approximated using 90 days).
+        /// Retrieves the GitHub User information from a set of usernames. Since parameters cannot be modified in async
+        /// methods, we return an extra variable without usernames that cause exceptions.
         /// </summary>
-        /// <param name="commits">A list of commits</param>
-        /// <returns>A list of commits that all were committed within the time window.</returns>
-        private static List<GitHubCommit> ExtractCommitsWithinTimeWindow(IReadOnlyList<GitHubCommit> commits)
+        /// <param name="usernames">A set of usernames to retrieve the GitHub data from.</param>
+        /// <returns>A list of GitHub User information and an updated set of usernames, excluding all usernames that
+        /// caused exceptions. </returns>
+        private static async Task<(List<User>, HashSet<string>)> RetrieveMembers(HashSet<string> usernames)
         {
-            // Get all commits in the last 90 days
-            List<GitHubCommit> commitsWithinWindow = new List<GitHubCommit>();
-            foreach (GitHubCommit commit in commits)
-            {
-                try
-                {
-                    if (Util.CheckWithinTimeWindow(commit.Commit.Committer.Date) && commit.Committer.Login != null)
-                    {
-                        commitsWithinWindow.Add(commit);
-                    }
-                }
-                catch
-                {
-                    // Skip the commits that cause exceptions
-                    continue;
-                }
-            }
-            return commitsWithinWindow;
-        }
-
-        /// <summary>
-        /// This method retrieves all User objects and usernames for all committers and commit authors in the last 90
-        /// days. Note: It is possible that open pull request authors have commits on their own forks. These are not detected 
-        /// as members as they have not yet made a contribution. 
-        /// </summary>
-        /// <param name="commits">A list of commits</param>
-        /// <returns>A tuple containing a list of users and a list of usernames.</returns>
-        private static async Task<(List<User>, HashSet<string>)> GetAllMembers(List<GitHubCommit> commits)
-        {
-            // Get the user info of all members that have made at least one commit in the last 90 days
-            HashSet<string> usernames = new HashSet<string>();
-            foreach (GitHubCommit commit in commits)
-            {
-                try
-                {
-                    // Note: all commits in timewindow have already been filtered such that committers have usernames
-                    usernames.Add(commit.Committer.Login);
-                    // Check that author date also falls within the time window before adding the author in the list of members
-                    if (commit.Author != null && commit.Author.Login != null && Util.CheckWithinTimeWindow(commit.Commit.Author.Date))
-                    {
-                        usernames.Add(commit.Author.Login);
-                    }
-                }
-                catch
-                {
-                    // Skip the commits that cause exceptions
-                    continue;
-                }
-            }
-            // TODO: Apply alias resolution
             List<User> members = new List<User>();
-            HashSet<string> memberUsernames = new HashSet<string>(); // A separate list to exclude usernames that cause exceptions
+            HashSet<string> updatedUsernames = new HashSet<string>(); // A separate list to exclude usernames that cause exceptions
             foreach (string username in usernames)
             {
                 try
                 {
                     User user = await GitHubRateLimitHandler.Delegate(Client.User.Get, username);
                     members.Add(user);
-                    memberUsernames.Add(username);
+                    updatedUsernames.Add(username);
                 }
                 catch
                 {
@@ -251,7 +220,7 @@ namespace YOSHI.DataRetrieverNS
                     continue;
                 }
             }
-            return (members, memberUsernames);
+            return (members, updatedUsernames);
         }
 
         /// <summary>
@@ -262,88 +231,81 @@ namespace YOSHI.DataRetrieverNS
         private static async Task<(
             Dictionary<string, HashSet<string>> mapUserFollowers,
             Dictionary<string, HashSet<string>> mapUserFollowing,
-            Dictionary<string, IReadOnlyList<Repository>> mapUserRepositories)>
-            RetrieveDataPerMember(HashSet<string> memberUsernames)
+            Dictionary<string, HashSet<string>> mapUserRepositories)>
+            RetrieveDataPerMember(string repoName, HashSet<string> memberUsernames)
         {
             Dictionary<string, HashSet<string>> mapUserFollowers = new Dictionary<string, HashSet<string>>();
             Dictionary<string, HashSet<string>> mapUserFollowing = new Dictionary<string, HashSet<string>>();
-            Dictionary<string, IReadOnlyList<Repository>> mapUserRepositories = new Dictionary<string, IReadOnlyList<Repository>>();
+            Dictionary<string, HashSet<string>> mapUserRepositories = new Dictionary<string, HashSet<string>>();
 
             foreach (string username in memberUsernames)
             {
                 // Get the given user's followers, limited to members that are also part of the current repository
                 IReadOnlyList<User> followers = await GitHubRateLimitHandler.Delegate(Client.User.Followers.GetAll, username, MaxSizeBatches);
-                HashSet<string> followersNames = Util.ConvertUsersToUsernames(followers, memberUsernames);
+                HashSet<string> followersNames = Filters.ExtractUsernamesFromUsers(followers, memberUsernames);
 
                 // Get the given user's users that they're following, limited to members that are also part of the current repository
                 IReadOnlyList<User> following = await GitHubRateLimitHandler.Delegate(Client.User.Followers.GetAllFollowing, username, MaxSizeBatches);
-                HashSet<string> followingNames = Util.ConvertUsersToUsernames(following, memberUsernames);
+                HashSet<string> followingNames = Filters.ExtractUsernamesFromUsers(following, memberUsernames);
 
                 // TODO: Check whether these repositories are all repositories that the user has at least one commit to the main branch / gh-pages
                 IReadOnlyList<Repository> repositories =
                     await GitHubRateLimitHandler.Delegate(Client.Repository.GetAllForUser, username, MaxSizeBatches);
+                HashSet<string> repos = Filters.ExtractRepoNamesFromRepos(repositories, repoName);
 
                 // Store all user data
                 mapUserFollowers.Add(username, followersNames);
                 mapUserFollowing.Add(username, followingNames);
-                mapUserRepositories.Add(username, repositories);
+                mapUserRepositories.Add(username, repos);
             }
 
             return (mapUserFollowers, mapUserFollowing, mapUserRepositories);
         }
 
         /// <summary>
-        /// This method retrieves all pull requests for a repository, and then retrieves the pull request review comments
-        /// for each pull request and maps them in a dictionary. Filters all pull requests and pull request comments by 
+        /// This method retrieves all pull requests for a repository. Filters all pull requests by non-committers, i.e., 
+        /// users that are not considered members.
+        /// </summary>
+        /// <param name="repoOwner">Repository owner</param>
+        /// <param name="repoName">Repository name</param>
+        /// <returns>A list of pull requests.</returns>
+        private static async Task<List<PullRequest>> RetrievePullRequests(string repoOwner, string repoName, HashSet<string> memberUsernames)
+        {
+            // We want all pull requests, since they often do not get closed correctly or closed at all, even if they're merged
+            PullRequestRequest stateFilter = new PullRequestRequest { State = ItemStateFilter.All };
+            IReadOnlyList<PullRequest> pullRequests =
+                await GitHubRateLimitHandler.Delegate(Client.PullRequest.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
+
+            // Filter out all pull requests outside the time window
+            Console.WriteLine("Filtering pull requests outside the time window...");
+            List<PullRequest> pullRequestsWithinWindow = Filters.FilterPullRequests(pullRequests, memberUsernames);
+
+            return pullRequestsWithinWindow;
+        }
+
+        /// <summary>
+        /// Given a list of pull requests for a repository, this method retrieves the pull request review comments
+        /// for each pull request and maps them in a dictionary. Filters all pull request comments by 
         /// non-committers, i.e., users that are not considered members.
         /// </summary>
         /// <param name="repoOwner">Repository owner</param>
         /// <param name="repoName">Repository name</param>
         /// <returns>A dictionary mapping pull requests to pull request review comments.</returns>
-        private static async Task<Dictionary<PullRequest, List<PullRequestReviewComment>>> MapPullRequestComments(
-            string repoOwner, string repoName, HashSet<string> memberUsernames)
+        private static async Task<Dictionary<PullRequest, List<PullRequestReviewComment>>> RetrieveCommentsPerPullRequest(
+            string repoOwner, string repoName, List<PullRequest> pullRequests, HashSet<string> memberUsernames)
         {
-            // We want all pull requests, since they often do not get closed correctly or closed at all, even if they're merged
-            Console.WriteLine("Retrieving pull requests...");
-            PullRequestRequest stateFilter = new PullRequestRequest { State = ItemStateFilter.All };
-            IReadOnlyList<PullRequest> pullRequests =
-                await GitHubRateLimitHandler.Delegate(Client.PullRequest.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
-            List<PullRequest> pullRequestsWithinWindow = new List<PullRequest>();
-
-            // Extract only the pull requests that fall within the 3-month time window (approximately 90 days)
-            // Note: this cannot be added as a parameter in the GitHub API request.
-            Console.WriteLine("Extracting pull requests within last 90 days...");
-            foreach (PullRequest pullRequest in pullRequests)
-            {
-                if (Util.CheckWithinTimeWindow(pullRequest.UpdatedAt) && pullRequest.User != null
-                    && pullRequest.User.Login != null && memberUsernames.Contains(pullRequest.User.Login))
-                {
-                    pullRequestsWithinWindow.Add(pullRequest);
-                }
-            }
-
-            // Map each pull request to its corresponding comments
-            Console.WriteLine("Retrieving pull request comments within last 90 days per pull request...");
             Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments =
                 new Dictionary<PullRequest, List<PullRequestReviewComment>>();
-            foreach (PullRequest pullRequest in pullRequestsWithinWindow)
+
+            // Map each pull request to its corresponding comments
+            foreach (PullRequest pullRequest in pullRequests)
             {
                 IReadOnlyList<PullRequestReviewComment> pullRequestComments =
                     await GitHubRateLimitHandler.Delegate(Client.PullRequest.ReviewComment.GetAll, repoOwner, repoName, pullRequest.Number, MaxSizeBatches);
 
-                // Filter out all comments that are not within the time window, do not have a commit author, or are not 
-                // considered current members (i.e., have not committed in the last 90 days). 
-                // Note: the 3 months period cannot be added as a parameter in the GitHub API request.
-                List<PullRequestReviewComment> pullReqCommentsWithinWindow = new List<PullRequestReviewComment>();
-                foreach (PullRequestReviewComment comment in pullRequestComments)
-                {
-                    if (Util.CheckWithinTimeWindow(comment.UpdatedAt) && comment.User != null && comment.User.Login != null && memberUsernames.Contains(comment.User.Login))
-                    {
-                        pullReqCommentsWithinWindow.Add(comment);
-                    }
-                }
+                List<PullRequestReviewComment> filteredComments = Filters.FilterComments(pullRequestComments, memberUsernames);
 
-                mapPullReqsToComments.Add(pullRequest, pullReqCommentsWithinWindow);
+                mapPullReqsToComments.Add(pullRequest, filteredComments);
             }
 
             return mapPullReqsToComments;

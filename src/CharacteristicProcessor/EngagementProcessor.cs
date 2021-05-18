@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using YOSHI.CommunityData;
 using YOSHI.CommunityData.MetricData;
+using YOSHI.DataRetrieverNS;
 
 namespace YOSHI.CharacteristicProcessorNS
 {
@@ -19,9 +20,9 @@ namespace YOSHI.CharacteristicProcessorNS
             engagement.MedianNrCommentsPerPullReq =
                 MedianNrCommentsPerPullReq(data.MapPullReqsToComments, data.MemberUsernames);
             //engagement.MedianMonthlyPullCommitCommentsDistribution;
-            engagement.MedianActiveMember = MedianActiveMember(data.CommitsWithinTimeWindow, data.MemberUsernames);
-            engagement.MedianWatcher = MedianWatcher(data.Watchers, data.MemberUsernames);
-            engagement.MedianStargazer = MedianStargazer(data.Stargazers, data.MemberUsernames);
+            engagement.MedianActiveMember = MedianContains(data.ActiveMembers, data.MemberUsernames);
+            engagement.MedianWatcher = MedianContains(data.Watchers, data.MemberUsernames);
+            engagement.MedianStargazer = MedianContains(data.Stargazers, data.MemberUsernames);
             engagement.MedianCommitDistribution = MedianCommitDistribution(data.CommitsWithinTimeWindow, data.MemberUsernames);
             engagement.MedianFileCollabDistribution = MedianFileCollabDistribution(data.CommitsWithinTimeWindow, data.MemberUsernames);
 
@@ -39,7 +40,7 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <param name="mapPullReqsToComments">A mapping from pull requests to their corresponding comments.</param>
         /// <param name="members">A set of members within the last 90 days.</param>
         /// <returns>The median value of pull request review comments per member.</returns>
-        private static double MedianNrCommentsPerPullReq(Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments, HashSet<string> members)
+        private static double MedianNrCommentsPerPullReq(Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments)
         {
             // Compute the comments per pull request
             // Note: the pull requests and comments not from members and not within the snapshot period have been
@@ -54,62 +55,12 @@ namespace YOSHI.CharacteristicProcessorNS
             return Statistics.ComputeMedian(commentsPerPullReq);
         }
 
-        /// <summary>
-        /// Given a list of commits and a list of members within the snapshot period, compute the median activity status
-        /// for each member. I.e., compute for each member whether they are an active member (i.e., committed in the 
-        /// last 30 days) (1) or not (0), and compute the median. 
-        /// </summary>
-        /// <param name="commits">A list of commits.</param>
-        /// <param name="members">A set of members within the last 90 days.</param>
-        /// <returns>The median value whether members are active. Can be 0, 0.5, 1.</returns>
-        private static double MedianActiveMember(List<GitHubCommit> commits, HashSet<string> members)
-        {
-            // A member is considered active if they made a commit in the last 30 days
-            HashSet<string> activeMembers = new HashSet<string>();
-            foreach (GitHubCommit commit in commits)
-            {
-                // Check whether the commit is within the last 30 days
-                if (Util.CheckWithinTimeWindow(commit.Commit.Committer.Date.Date, 30))
-                {
-                    if (commit.Committer != null && commit.Committer.Login != null && members.Contains(commit.Committer.Login))
-                    {
-                        activeMembers.Add(commit.Committer.Login);
-                    }
-                    if (commit.Author != null && commit.Author.Login != null && members.Contains(commit.Author.Login))
-                    {
-                        activeMembers.Add(commit.Author.Login);
-                    }
-                }
-            }
 
-            return MedianContains(activeMembers, members);
-        }
 
-        /// <summary>
-        /// Method added for clarity. Given a list of watchers and a list of members within the snapshot period, compute
-        /// the median watcher status for all members. I.e., compute for each member whether they are a watcher (1) or not (0),
-        /// and compute the median. 
-        /// </summary>
-        /// <param name="watchers">A readonly list of watcher members.</param>
-        /// <param name="members">A set of members within the last 90 days.</param>
-        /// <returns>The median value whether members are also watchers. Can be 0, 0.5, 1.</returns>
-        private static double MedianWatcher(IReadOnlyList<User> watchers, HashSet<string> members)
-        {
-            return MedianContains(Util.ConvertUsersToUsernames(watchers, members), members);
-        }
 
         /// <summary>
         /// Method added for clarity. Given a list of stargazers and a list of members within the snapshot period, 
         /// compute the median stargazer status for all members. I.e., compute for each member whether they are a 
-        /// stargazer (1) or not (0), and compute the median. 
-        /// </summary>
-        /// <param name="stargazers">A readonly list of stargazers members.</param>
-        /// <param name="members">A set of members within the last 90 days.</param>
-        /// <returns>The median value whether members are also stargazers. Can be 0, 0.5, 1.</returns>
-        private static double MedianStargazer(IReadOnlyList<User> stargazers, HashSet<string> members)
-        {
-            return MedianContains(Util.ConvertUsersToUsernames(stargazers, members), members);
-        }
 
         /// <summary>
         /// Given a set of users and a set of members active in the last 90 days, compute a list containing for each 
@@ -155,7 +106,7 @@ namespace YOSHI.CharacteristicProcessorNS
                 // Note: all commits within the timewindow have already accessed committer, so we do not need to check
                 // that committer is not null.
                 nrCommitsPerUser[commit.Committer.Login]++;
-                if (commit.Author != null && commit.Author.Login != null && Util.CheckWithinTimeWindow(commit.Commit.Author.Date))
+                if (commit.Author != null && commit.Author.Login != null && Filters.CheckWithinTimeWindow(commit.Commit.Author.Date))
                 {
                     nrCommitsPerUser[commit.Author.Login]++;
                 }
@@ -254,34 +205,31 @@ namespace YOSHI.CharacteristicProcessorNS
 
             foreach (GitHubCommit commit in commits)
             {
-                if (commit.Files != null)
+                // Loop over all files affected by the current commit
+                foreach (GitHubCommitFile file in commit.Files)
                 {
-                    // Loop over all files affected by the current commit
-                    foreach (GitHubCommitFile file in commit.Files)
+                    if (file.Filename != null)
                     {
-                        if (file.Filename != null)
+                        // Keep track of changed filenames, will be resolved later
+                        if (file.PreviousFileName != null)
                         {
-                            // Keep track of changed filenames, will be resolved later
-                            if (file.PreviousFileName != null)
-                            {
-                                changedFileNames.Add((file.Filename, file.PreviousFileName));
-                            }
+                            changedFileNames.Add((file.Filename, file.PreviousFileName));
+                        }
 
-                            // Check if we previously saw this file, add as key to the dictionary, add the committer to its value
-                            if (committersPerFile.ContainsKey(file.Filename))
-                            {
-                                committersPerFile[file.Filename].Add(commit.Committer.Login);
-                            }
-                            else
-                            {
-                                committersPerFile.Add(file.Filename, new HashSet<string> { commit.Committer.Login });
-                            }
+                        // Check if we previously saw this file, add as key to the dictionary, add the committer to its value
+                        if (committersPerFile.ContainsKey(file.Filename))
+                        {
+                            committersPerFile[file.Filename].Add(commit.Committer.Login);
+                        }
+                        else
+                        {
+                            committersPerFile.Add(file.Filename, new HashSet<string> { commit.Committer.Login });
+                        }
 
-                            // Add the commit author to the current file's entry in the dictionary
-                            if (commit.Author != null && commit.Author.Login != null && members.Contains(commit.Author.Login))
-                            {
-                                committersPerFile[file.Filename].Add(commit.Author.Login);
-                            }
+                        // Add the commit author to the current file's entry in the dictionary
+                        if (commit.Author != null && commit.Author.Login != null && members.Contains(commit.Author.Login))
+                        {
+                            committersPerFile[file.Filename].Add(commit.Author.Login);
                         }
                     }
                 }

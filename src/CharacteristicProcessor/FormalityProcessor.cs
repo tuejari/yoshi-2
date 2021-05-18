@@ -36,10 +36,7 @@ namespace YOSHI.CharacteristicProcessorNS
 
             foreach (GitHubCommit commit in commits)
             {
-                if (commit.Committer != null && commit.Committer.Login != null && memberUsernames.Contains(commit.Committer.Login))
-                {
-                    committers.Add(commit.Committer.Login);
-                }
+                committers.Add(commit.Committer.Login);
                 if (commit.Author != null && commit.Author.Login != null && memberUsernames.Contains(commit.Author.Login))
                 {
                     committers.Add(commit.Author.Login);

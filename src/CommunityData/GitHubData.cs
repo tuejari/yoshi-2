@@ -14,7 +14,7 @@ namespace YOSHI.CommunityData
         // Followers and following are limited to users that also worked on this repository
         public Dictionary<string, HashSet<string>> MapUserFollowers { get; set; }
         public Dictionary<string, HashSet<string>> MapUserFollowing { get; set; }
-        public Dictionary<string, IReadOnlyList<Repository>> MapUserRepositories { get; set; }
+        public Dictionary<string, HashSet<string>> MapUserRepositories { get; set; }
 
         public IReadOnlyList<Milestone> Milestones { get; set; }
         public IReadOnlyList<GitHubCommit> Commits { get; set; }
@@ -28,8 +28,9 @@ namespace YOSHI.CommunityData
         // Stargazers are users starring the repository. Repository starring is a feature that lets users bookmark
         // repositories. Stars are shown next to repositories to show an approximate level of interest. Stars have no
         // effect on notifications or the activity feed.
-        public IReadOnlyList<User> Watchers { get; set; }
-        public IReadOnlyList<User> Stargazers { get; set; }
+        public HashSet<string> ActiveMembers { get; set; }
+        public HashSet<string> Watchers { get; set; }
+        public HashSet<string> Stargazers { get; set; }
 
         public List<BingAddress> Addresses { get; set; }
     }

@@ -29,29 +29,15 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <param name="mapUserRepositories">A mapping from usernames to the repositories that they worked on.</param>
         /// <returns>A mapping for each members to a set of other members who worked on a common repository.</returns>
         private static Dictionary<string, HashSet<string>> CommonProjectsConnections(
-            Dictionary<string, IReadOnlyList<Repository>> mapUserRepositories,
+            Dictionary<string, HashSet<string>> mapUserRepositories,
             string repoName,
             Characteristics characteristics)
         {
-            // Obtain a mapping from all users (usernames) to the names of the repositories they worked on
-            Dictionary<string, List<string>> mapUserRepoName = new Dictionary<string, List<string>>();
-            foreach (KeyValuePair<string, IReadOnlyList<Repository>> mapUserRepos in mapUserRepositories)
-            {
-                mapUserRepoName.Add(mapUserRepos.Key, new List<string>());
-                foreach (Repository repo in mapUserRepos.Value)
-                {
-                    if (repo.Name != repoName) // Exclude the repository we are currently analyzing
-                    {
-                        mapUserRepoName[mapUserRepos.Key].Add(repo.Name);
-                    }
-                }
-            }
-
             // Find common projects by comparing the names of repositories they worked on
             Dictionary<string, HashSet<string>> commonProjectConnections = new Dictionary<string, HashSet<string>>();
-            foreach (KeyValuePair<string, List<string>> firstUser in mapUserRepoName)
+            foreach (KeyValuePair<string, HashSet<string>> firstUser in mapUserRepositories)
             {
-                foreach (KeyValuePair<string, List<string>> secondUser in mapUserRepoName)
+                foreach (KeyValuePair<string, HashSet<string>> secondUser in mapUserRepositories)
                 {
                     if (firstUser.Key != secondUser.Key)
                     {
