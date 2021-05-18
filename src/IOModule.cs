@@ -68,6 +68,7 @@ namespace YOSHI
                     using CsvWriter csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
                     csv.Context.RegisterClassMap<CommunityMap>();
                     csv.WriteHeader<Community>();
+                    csv.NextRecord();
                     validOutFile = true;
                 }
 
@@ -123,19 +124,14 @@ namespace YOSHI
         /// </summary>
         public static void WriteToFile(Community community)
         {
-            List<Community> communities = new List<Community> { community };
-
             // Append to the file.
-            CsvConfiguration config = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                // Don't write the header again.
-                HasHeaderRecord = false,
-            };
+            CsvConfiguration config = new CsvConfiguration(CultureInfo.InvariantCulture);
             using FileStream stream = File.Open(OutDirFile, FileMode.Append);
             using StreamWriter writer = new StreamWriter(stream);
             using CsvWriter csv = new CsvWriter(writer, config);
             csv.Context.RegisterClassMap<CommunityMap>();
-            csv.WriteRecords(communities);
+            csv.WriteRecord(community);
+            csv.NextRecord();
         }
 
         /// <summary>
