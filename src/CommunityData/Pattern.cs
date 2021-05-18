@@ -5,14 +5,14 @@
     /// </summary>
     public class Pattern
     {
-        public bool SocialNetwork { get; set; } = false;
-        public bool FormalGroup { get; set; } = false;
-        public bool ProjectTeam { get; set; } = false;
-        public bool WorkGroup { get; set; } = false;
-        public bool NetworkOfPractice { get; set; } = false;
-        public bool InformalCommunity { get; set; } = false;
-        public bool FormalNetwork { get; set; } = false;
-        public bool InformalNetwork { get; set; } = false;
-        public bool CommunityOfPractice { get; set; } = false;
+        public bool SN { get; set; } = false;
+        public bool FG { get; set; } = false;
+        public bool PT { get; set; } = false;
+        //public bool WG { get; set; } = false;
+        public bool NoP { get; set; } = false;
+        public bool IC { get; set; } = false;
+        public bool FN { get; set; } = false;
+        public bool IN { get; set; } = false;
+        public bool CoP { get; set; } = false;
     }
 }

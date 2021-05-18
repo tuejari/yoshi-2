@@ -37,42 +37,42 @@ namespace YOSHI
 
             if (chars.Structure) // Community exhibits structure
             {
-                pattern.SocialNetwork = true;
+                pattern.SN = true;
 
                 if (chars.Dispersion >= th_global_distance) // Dispersed
                 {
-                    pattern.NetworkOfPractice = true;
+                    pattern.NoP = true;
                     if (chars.Formality < th_formality_lvl_low) // Informal
                     {
-                        pattern.InformalNetwork = true;
+                        pattern.IN = true;
                     }
                     else if (chars.Formality > th_formality_lvl_high) // Formal
                     {
-                        pattern.FormalNetwork = true;
+                        pattern.FN = true;
                     }
                 }
                 else // Not dispersed
                 {
-                    pattern.CommunityOfPractice = true;
+                    pattern.CoP = true;
                     //if (chars.Cohesion > th_cohesion_lvl) // Cohesive
                     //{
                     //    pattern.WorkGroup = true;
                     //}
                     if (chars.Longevity < th_longevity) // Low durability / short-lived
                     {
-                        pattern.ProjectTeam = true;
+                        pattern.PT = true;
                     }
                     // Note: The threshold mentions > 0.1 and < 20. Since for formality and informality we have < 0.1
                     // and > 20 respectively, I have decided to include 0.1 and 20 in this threshold
                     if (chars.Formality >= th_formality_lvl_low && chars.Formality <= th_formality_lvl_high) // Not informal but also not formal
                     {
-                        pattern.FormalGroup = true;
+                        pattern.FG = true;
                     }
                 }
 
                 if (chars.Engagement > th_engagement_lvl)
                 {
-                    pattern.InformalCommunity = true;
+                    pattern.IC = true;
                 }
             }
         }

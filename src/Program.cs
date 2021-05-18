@@ -39,7 +39,7 @@ namespace YOSHI
                 {
                     Console.WriteLine("------------------------------------------------"); // Line to distinguish between communities
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Started processing community {0} from {1}", community.RepoName, community.RepoOwner);
+                    Console.WriteLine("Started processing community {0} from {1}. Time: {2}", community.RepoName, community.RepoOwner, DateTime.Now.ToString());
                     Console.ResetColor();
 
                     // Retrieving GitHub data needed to compute whether the community is valid (i.e., it has at least
@@ -92,30 +92,41 @@ namespace YOSHI
                     IOModule.WriteToFile(community);
 
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Finished processing community from {0}, url: {1}", community.RepoOwner, community.RepoName);
+                    Console.WriteLine("Finished processing community {0} from {1}. Time: {2}", community.RepoName, community.RepoOwner, DateTime.Now.ToString());
                     Console.ResetColor();
                 }
                 catch (GeocoderRateLimitException e)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Something went wrong for {0}", community.RepoName);
                     Console.WriteLine(e.Message);
                     Console.ResetColor();
-                    throw;
+                    break;
                 }
                 catch (Exception e)
                 {
                     // We want to output the number of Bing Maps Requests left, since it can take hours for Bing Maps Requests to update
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("There are still {0} Bing Maps Requests left", GeoService.BingRequestsLeft);
+                    Console.ResetColor();
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Something went wrong for {0}", community.RepoName);
                     Console.WriteLine(e.Message);
                     Console.ResetColor();
                     continue;
                 }
             }
+            // We want to output the number of Bing Maps Requests left, since it can take hours for Bing Maps Requests to update
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("There are still {0} Bing Maps Requests left", GeoService.BingRequestsLeft);
             Console.ResetColor();
+
+            // Prevent the console window from automatically closing after the main process is done running
+            // TODO: Write the console log to a file
+            Console.WriteLine("Press Enter to close this window . . .");
+            ConsoleKeyInfo key = Console.ReadKey();
+            while (key.Key != ConsoleKey.Enter)
+            {
+                key = Console.ReadKey();
+            };
         }
     }
 }

@@ -114,9 +114,12 @@ namespace YOSHI.DataRetrieverNS
                     return false;
                 }
             }
-            catch (Exception e)
+            catch
             {
-                throw new Exception("Something went wrong while retrieving data from GitHub to check validity of repo: " + repoName, e);
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Something went wrong while retrieving data from GitHub to check validity of repo: " + repoName);
+                Console.ResetColor();
+                throw;
             }
 
             return true;
@@ -149,9 +152,12 @@ namespace YOSHI.DataRetrieverNS
                 Console.WriteLine("Retrieving pull request comments within last 90 days per pull request...");
                 data.MapPullReqsToComments = await RetrieveCommentsPerPullRequest(repoOwner, repoName, pullRequestsWithinWindow, data.MemberUsernames);
             }
-            catch (Exception e)
+            catch
             {
-                throw new Exception("Something went wrong while retrieving data from GitHub to compute structure of repo: " + repoName, e);
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Something went wrong while retrieving data from GitHub to compute structure of repo: " + repoName);
+                Console.ResetColor();
+                throw;
             }
         }
 
@@ -187,9 +193,12 @@ namespace YOSHI.DataRetrieverNS
                 IReadOnlyList<User> stargazers = await GitHubRateLimitHandler.Delegate(Client.Activity.Starring.GetAllStargazers, repoOwner, repoName, MaxSizeBatches);
                 data.Stargazers = Filters.ExtractUsernamesFromUsers(stargazers, data.MemberUsernames);
             }
-            catch (Exception e)
+            catch
             {
-                throw new Exception("Something went wrong while retrieving data from GitHub", e);
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Something went wrong while retrieving miscellaneous data from GitHub of repo: " + repoName);
+                Console.ResetColor();
+                throw;
             }
 
             await GitHubRequestsRemaining();

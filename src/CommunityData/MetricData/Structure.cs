@@ -6,7 +6,7 @@
     public class Structure
     {
         public bool CommonProjects { get; set; }
-        public bool PullReqInteraction { get; set; }
         public bool Followers { get; set; }
+        public bool PullReqInteraction { get; set; }
     }
 }

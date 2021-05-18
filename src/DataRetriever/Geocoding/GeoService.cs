@@ -44,7 +44,7 @@ namespace YOSHI.DataRetrieverNS.Geocoding
                     // Continue with the next user if this user was causing an exception
                     Console.ForegroundColor = ConsoleColor.DarkYellow;
                     Console.WriteLine("Could not retrieve the location from {0} in repo {1}", member.Login, repoName);
-                    Console.WriteLine(e.Message);
+                    Console.WriteLine(e.InnerException.Message);
                     Console.ResetColor();
                     continue;
                 }
@@ -87,7 +87,7 @@ namespace YOSHI.DataRetrieverNS.Geocoding
             }
             else
             {
-                throw new GeocoderRateLimitException("No more Bing Requests left.");
+                throw new GeocoderRateLimitException("Too few Bing Requests left.");
             }
         }
 

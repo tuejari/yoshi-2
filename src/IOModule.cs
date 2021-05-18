@@ -146,8 +146,8 @@ namespace YOSHI
                 this.Map(m => m.RepoOwner).Index(1);
 
                 this.Map(m => m.Metrics.Structure.CommonProjects).Index(2);
-                this.Map(m => m.Metrics.Structure.PullReqInteraction).Index(3);
                 this.Map(m => m.Metrics.Structure.Followers).Index(4);
+                this.Map(m => m.Metrics.Structure.PullReqInteraction).Index(3);
 
                 this.Map(m => m.Metrics.Dispersion.VarianceGeographicalDistance).Index(5);
                 this.Map(m => m.Metrics.Dispersion.VarianceHofstedeCulturalDistance).Index(6);
@@ -173,17 +173,17 @@ namespace YOSHI
                 this.Map(m => m.Characteristics.Formality).Index(21);
                 this.Map(m => m.Characteristics.Engagement).Index(22);
                 this.Map(m => m.Characteristics.Longevity).Index(23);
-                this.Map(m => m.Characteristics.Cohesion).Index(24);
+                //this.Map(m => m.Characteristics.Cohesion).Index(24);
 
-                this.Map(m => m.Pattern.SocialNetwork).Index(25);
-                this.Map(m => m.Pattern.FormalGroup).Index(26);
-                this.Map(m => m.Pattern.ProjectTeam).Index(27);
+                this.Map(m => m.Pattern.SN).Index(25);
+                this.Map(m => m.Pattern.FG).Index(26);
+                this.Map(m => m.Pattern.PT).Index(27);
                 //this.Map(m => m.Pattern.WorkGroup).Index(28);
-                this.Map(m => m.Pattern.NetworkOfPractice).Index(29);
-                this.Map(m => m.Pattern.InformalCommunity).Index(30);
-                this.Map(m => m.Pattern.FormalNetwork).Index(31);
-                this.Map(m => m.Pattern.InformalNetwork).Index(32);
-                this.Map(m => m.Pattern.CommunityOfPractice).Index(33);
+                this.Map(m => m.Pattern.NoP).Index(29);
+                this.Map(m => m.Pattern.IC).Index(30);
+                this.Map(m => m.Pattern.FN).Index(31);
+                this.Map(m => m.Pattern.IN).Index(32);
+                this.Map(m => m.Pattern.CoP).Index(33);
             }
         }
     }
