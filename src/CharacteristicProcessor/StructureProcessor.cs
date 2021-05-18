@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using YOSHI.CommunityData;
+using YOSHI.CommunityData.MetricData;
 
 namespace YOSHI.CharacteristicProcessorNS
 {
@@ -17,10 +18,16 @@ namespace YOSHI.CharacteristicProcessorNS
             GitHubData data = community.Data;
             // Note: we compute all connections between members to potentially obtain member graphs in the future to
             // check whether the structure 
-            // TODO: Transform these mappings to a graph structure
-            CommonProjectsConnections(data.MapUserRepositories, community.RepoName, community.Characteristics);
-            FollowConnections(data.MapUserFollowers, data.MapUserFollowing, community.Characteristics);
-            PullReqConnections(data.MapPullReqsToComments, data.MemberUsernames, community.Characteristics);
+            // TODO: Use/Export the graph. Currently it is tracked, but not used.
+            Graph<string> structureGraph = new Graph<string>();
+            structureGraph.AddNodes(data.MemberUsernames);
+
+            Structure s = community.Metrics.Structure;
+            s.CommonProjects = AddCommonProjectsConnections(ref structureGraph, data.MapUserRepositories);
+            s.Followers = AddFollowConnections(ref structureGraph, data.MapUserFollowers, data.MapUserFollowing);
+            s.PullReqInteraction = AddPullReqConnections(ref structureGraph, data.MapPullReqsToComments, data.MemberUsernames);
+
+            community.Characteristics.Structure = s.CommonProjects || s.Followers || s.PullReqInteraction;
         }
 
         /// <summary>
@@ -28,13 +35,13 @@ namespace YOSHI.CharacteristicProcessorNS
         /// </summary>
         /// <param name="mapUserRepositories">A mapping from usernames to the repositories that they worked on.</param>
         /// <returns>A mapping for each members to a set of other members who worked on a common repository.</returns>
-        private static Dictionary<string, HashSet<string>> CommonProjectsConnections(
-            Dictionary<string, HashSet<string>> mapUserRepositories,
-            string repoName,
-            Characteristics characteristics)
+        private static bool AddCommonProjectsConnections(
+            ref Graph<string> structureGraph,
+            Dictionary<string, HashSet<string>> mapUserRepositories)
         {
+            bool commonProjectsConnection = false;
+
             // Find common projects by comparing the names of repositories they worked on
-            Dictionary<string, HashSet<string>> commonProjectConnections = new Dictionary<string, HashSet<string>>();
             foreach (KeyValuePair<string, HashSet<string>> firstUser in mapUserRepositories)
             {
                 foreach (KeyValuePair<string, HashSet<string>> secondUser in mapUserRepositories)
@@ -46,14 +53,14 @@ namespace YOSHI.CharacteristicProcessorNS
                         if (commonProjects.Count() > 0)
                         {
                             // Two members have a common repository to which they are contributing, except for the 
-                            // currently analyzed repository. We set this community's structure to true.
-                            characteristics.Structure = true;
+                            // currently analyzed repository.
+                            structureGraph.AddEdge(firstUser.Key, secondUser.Key);
+                            commonProjectsConnection = true;
                         }
                     }
                 }
             }
-
-            return commonProjectConnections;
+            return commonProjectsConnection;
         }
 
         /// <summary>
@@ -65,25 +72,25 @@ namespace YOSHI.CharacteristicProcessorNS
         /// follow.</param>
         /// <returns>A mapping for each username to a combined set of followers and following from which the names 
         /// have been extracted.</returns>
-        private static Dictionary<string, HashSet<string>> FollowConnections(
+        private static bool AddFollowConnections(
+            ref Graph<string> structureGraph,
             Dictionary<string, HashSet<string>> mapUserFollowers,
-            Dictionary<string, HashSet<string>> mapUserFollowing,
-            Characteristics characteristics)
+            Dictionary<string, HashSet<string>> mapUserFollowing)
         {
-            Dictionary<string, HashSet<string>> followConnections = new Dictionary<string, HashSet<string>>();
+            bool followConnection = false;
 
             // Obtain a mapping from all users (usernames) to the names of the followers and following
             foreach (string user in mapUserFollowers.Keys)
             {
-                followConnections.Add(user, new HashSet<string>(mapUserFollowers[user].Union(mapUserFollowing[user])));
-                if (followConnections[user].Count() > 0)
+                HashSet<string> followerOrFollowing = new HashSet<string>(mapUserFollowers[user].Union(mapUserFollowing[user]));
+                foreach (string follow in followerOrFollowing)
                 {
-                    // Two members have a follower/following relation. We set this community's structure to true.
-                    characteristics.Structure = true;
+                    // Two members have a follower/following relation.
+                    structureGraph.AddEdge(user, follow);
+                    followConnection = true;
                 }
             }
-
-            return followConnections;
+            return followConnection;
         }
 
         /// <summary>
@@ -91,18 +98,12 @@ namespace YOSHI.CharacteristicProcessorNS
         /// </summary>
         /// <param name="mapPullReqsToComments">A mapping from each pull request to their pull request review comments.</param>
         /// <returns>A mapping for each user to all other users that they're connected to through pull requests.</returns>
-        private static Dictionary<string, HashSet<string>> PullReqConnections(
+        private static bool AddPullReqConnections(
+            ref Graph<string> structureGraph,
             Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments,
-            HashSet<string> members,
-            Characteristics characteristics)
+            HashSet<string> members)
         {
-            Dictionary<string, HashSet<string>> pullReqConnections = new Dictionary<string, HashSet<string>>();
-            // Initialize dictionary for every member to an empty set
-            foreach (string member in members)
-            {
-                pullReqConnections.Add(member, new HashSet<string>());
-            }
-
+            bool pullReqConnection = false;
             // Add the connections for each pull request commenter and author
             foreach (KeyValuePair<PullRequest, List<PullRequestReviewComment>> mapPullReqToComments in mapPullReqsToComments)
             {
@@ -118,18 +119,15 @@ namespace YOSHI.CharacteristicProcessorNS
                         // (i.e., whether they committed to this repository at least once)
                         if (pullReqCommenter != null && members.Contains(pullReqCommenter))
                         {
-                            pullReqConnections[pullReqCommenter].Add(pullReqAuthor);
-                            pullReqConnections[pullReqAuthor].Add(pullReqCommenter);
-
-                            // Two members have had a recent pull request interaction. We set this community's structure
-                            // to true.
-                            characteristics.Structure = true;
+                            // Two members have had a recent pull request interaction.
+                            structureGraph.AddEdge(pullReqAuthor, pullReqCommenter);
+                            pullReqConnection = true;
                         }
                     }
                 }
             }
-
-            return pullReqConnections;
+            return pullReqConnection;
         }
+
     }
 }
