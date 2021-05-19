@@ -32,6 +32,7 @@ namespace YOSHI
         {
             // Retrieve the communities through console input handled by the IOModule.
             List<Community> communities = IOModule.TakeInput();
+            Dictionary<string, string> failedCommunities = new Dictionary<string, string>();
 
             foreach (Community community in communities)
             {
@@ -100,6 +101,7 @@ namespace YOSHI
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine(e.Message);
                     Console.ResetColor();
+                    failedCommunities.Add(community.RepoName, e.Message);
                     break;
                 }
                 catch (Exception e)
@@ -111,6 +113,7 @@ namespace YOSHI
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine(e.Message);
                     Console.ResetColor();
+                    failedCommunities.Add(community.RepoName, e.Message);
                     continue;
                 }
             }
@@ -118,6 +121,18 @@ namespace YOSHI
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("There are still {0} Bing Maps Requests left", GeoService.BingRequestsLeft);
             Console.ResetColor();
+
+            // Make sure to output the communities that failed at the end to make them easily identifiable
+            if (failedCommunities.Count > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("The following communities failed due to exceptions:");
+                foreach (KeyValuePair<string, string> failedCommunity in failedCommunities)
+                {
+                    Console.WriteLine("{0}, {1}", failedCommunity.Key, failedCommunity.Value);
+                }
+                Console.ResetColor();
+            }
 
             // Prevent the console window from automatically closing after the main process is done running
             // TODO: Write the console log to a file

@@ -156,13 +156,13 @@ namespace YOSHI
                 this.Map(m => m.Metrics.Formality.Milestones).Index(8);
                 this.Map(m => m.Metrics.Formality.Lifetime).Index(9);
 
+                this.Map(m => m.Metrics.Engagement.MedianNrCommentsPerPullReq).Index(13);
+                this.Map(m => m.Metrics.Engagement.MedianMonthlyPullCommitCommentsDistribution).Index(16);
                 this.Map(m => m.Metrics.Engagement.MedianActiveMember).Index(10);
                 this.Map(m => m.Metrics.Engagement.MedianWatcher).Index(11);
                 this.Map(m => m.Metrics.Engagement.MedianStargazer).Index(12);
-                this.Map(m => m.Metrics.Engagement.MedianNrCommentsPerPullReq).Index(13);
-                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution).Index(14);
                 this.Map(m => m.Metrics.Engagement.MedianCommitDistribution).Index(15);
-                this.Map(m => m.Metrics.Engagement.MedianMonthlyPullCommitCommentsDistribution).Index(16);
+                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution).Index(14);
 
                 this.Map(m => m.Metrics.Longevity.MeanCommitterLongevity).Index(17);
 

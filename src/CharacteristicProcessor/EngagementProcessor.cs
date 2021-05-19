@@ -1,4 +1,5 @@
 ﻿using Octokit;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using YOSHI.CommunityData;
@@ -18,8 +19,12 @@ namespace YOSHI.CharacteristicProcessorNS
             GitHubData data = community.Data;
             Engagement engagement = community.Metrics.Engagement;
             engagement.MedianNrCommentsPerPullReq =
-                MedianNrCommentsPerPullReq(data.MapPullReqsToComments, data.MemberUsernames);
-            //engagement.MedianMonthlyPullCommitCommentsDistribution;
+                MedianNrCommentsPerPullReq(data.MapPullReqsToComments);
+            engagement.MedianMonthlyPullCommitCommentsDistribution = MedianMonthlyCommentsDistribution(
+                data.CommitComments,
+                data.MapPullReqsToComments.Values.SelectMany(x => x).ToList(),
+                data.MemberUsernames
+            );
             engagement.MedianActiveMember = MedianContains(data.ActiveMembers, data.MemberUsernames);
             engagement.MedianWatcher = MedianContains(data.Watchers, data.MemberUsernames);
             engagement.MedianStargazer = MedianContains(data.Stargazers, data.MemberUsernames);
@@ -55,12 +60,67 @@ namespace YOSHI.CharacteristicProcessorNS
             return Statistics.ComputeMedian(commentsPerPullReq);
         }
 
+        /// <summary>
+        /// Computes the median of all members monthly comments. TODO: update contract
+        /// </summary>
+        /// <param name="commitComments"></param>
+        /// <param name="pullReqComments"></param>
+        /// <param name="members"></param>
+        /// <returns></returns>
+        private static double MedianMonthlyCommentsDistribution(IReadOnlyList<CommitComment> commitComments, List<PullRequestReviewComment> pullReqComments, HashSet<string> members)
+        {
+            // Store the dates of the comments per member, so we can count the number of comments per month for each member
+            // TODO: Maybe move to filter (for pre-processing)
+            Dictionary<string, List<DateTimeOffset>> commentDatesPerMember = new Dictionary<string, List<DateTimeOffset>>();
 
+            foreach (string member in members)
+            {
+                commentDatesPerMember.Add(member, new List<DateTimeOffset>());
+            }
 
+            foreach (CommitComment comment in commitComments)
+            {
+                commentDatesPerMember[comment.User.Login].Add(comment.CreatedAt);
+            }
+            foreach (PullRequestReviewComment comment in pullReqComments)
+            {
+                commentDatesPerMember[comment.User.Login].Add(comment.CreatedAt);
+            }   
+
+            List<double> meanCommentsPerMonthPerMember = new List<double>();
+            foreach (string member in members) 
+            {
+                // Check for each comment in which month it took place and compute the average comments per month for this member
+                List<int> nrCommentsPerMonth = new List<int> { 0, 0, 0 };
+                foreach (DateTimeOffset date in commentDatesPerMember[member])
+                {
+                    nrCommentsPerMonth[CheckMonth(date)]++;
+                }
+                // TODO: Currently not yet a distribution
+                meanCommentsPerMonthPerMember.Add(nrCommentsPerMonth.Average());
+            }  
+
+            return Statistics.ComputeMedian(meanCommentsPerMonthPerMember);
+        }
 
         /// <summary>
-        /// Method added for clarity. Given a list of stargazers and a list of members within the snapshot period, 
-        /// compute the median stargazer status for all members. I.e., compute for each member whether they are a 
+        /// Given a date, check in which month it appears over the 3-month window. 0 means it occurs in the first month 
+        /// of the snapshot (i.e., the oldest), 1 in the second month, 2 in the last month (i.e., the latest month).
+        /// </summary>
+        /// <param name="date">The date to check.</param>
+        /// <returns>The number of the month in which the date occurs</returns>
+        private static int CheckMonth(DateTimeOffset date)
+        {
+            return date switch
+            {
+                // Comment within 1-30 days before today (i.e., third month of the snapshot)
+                DateTimeOffset n when Filters.CheckWithinTimeWindow(n, 30) => 2,
+                // Comment within 31-60 days before today (i.e., second month of the snapshot)
+                DateTimeOffset n when Filters.CheckWithinTimeWindow(n, 60) => 1,
+                // Comment within 61-90 days before today (i.e., first month of the snapshot)
+                _ => 0,
+            };
+        }
 
         /// <summary>
         /// Given a set of users and a set of members active in the last 90 days, compute a list containing for each 
@@ -95,6 +155,8 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <returns></returns>
         private static double MedianCommitDistribution(List<GitHubCommit> commitsWithinWindow, HashSet<string> members)
         {
+            // TODO: Compute per month
+
             Dictionary<string, int> nrCommitsPerUser = new Dictionary<string, int>();
             foreach (string member in members)
             {
@@ -123,6 +185,8 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <returns></returns>
         private static double MedianFileCollabDistribution(List<GitHubCommit> commits, HashSet<string> members)
         {
+            // TODO: Compute per month
+
             // Extract the committers per file and the changed filenames
             (
                 HashSet<(string, string)> changedFileNames,
