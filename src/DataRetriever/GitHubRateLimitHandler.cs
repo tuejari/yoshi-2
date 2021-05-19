@@ -183,7 +183,6 @@ namespace YOSHI.DataRetrieverNS
                 }
                 catch (RateLimitExceededException)
                 {
-                    Console.WriteLine("It does throw rate limit exceeded exceptions");
                     // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
                     WaitUntilReset();
                 }
@@ -196,6 +195,7 @@ namespace YOSHI.DataRetrieverNS
         /// </summary>
         private static void WaitUntilReset()
         {
+            Console.ForegroundColor = ConsoleColor.Magenta;
             // Set the default wait time to one hour
             TimeSpan timespan = TimeSpan.FromHours(1);
 
@@ -207,6 +207,8 @@ namespace YOSHI.DataRetrieverNS
                 DateTimeOffset limitReset = (DateTimeOffset)whenDoesTheLimitReset;
                 timespan = (DateTimeOffset)whenDoesTheLimitReset - DateTimeOffset.Now;
                 timespan = timespan.Add(TimeSpan.FromSeconds(30)); // Add 30 seconds to the timespan
+                
+                Console.WriteLine("GitHub Rate Limit reached.");
                 Console.WriteLine("Waiting until: " + limitReset.AddSeconds(30).DateTime.ToLocalTime().ToString());
             }
             else
@@ -216,6 +218,7 @@ namespace YOSHI.DataRetrieverNS
             }
             Thread.Sleep(timespan); // Wait until the rate limit resets
             Console.WriteLine("Done waiting for the rate limit reset, continuing now: " + DateTimeOffset.Now.DateTime.ToLocalTime().ToString());
+            Console.ResetColor();
         }
     }
 }
