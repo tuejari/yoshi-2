@@ -47,7 +47,7 @@ namespace YOSHI.CharacteristicProcessorNS
 
             if ((contributors.Count + collaborators.Count) != memberUsernames.Count)
             {
-                throw new Exception("less/more contributors/collaborators than members");
+                throw new Exception("Found fewer or more contributors and collaborators than members");
             }
 
             float meanMembershipType = (float)(contributors.Count + collaborators.Count * 2) /

@@ -136,7 +136,10 @@ namespace YOSHI
 
             // Prevent the console window from automatically closing after the main process is done running
             // TODO: Write the console log to a file
+            Console.BackgroundColor = ConsoleColor.DarkGreen;
+            Console.WriteLine("The application has finished processing the inputted communities.");
             Console.WriteLine("Press Enter to close this window . . .");
+            Console.ResetColor();
             ConsoleKeyInfo key = Console.ReadKey();
             while (key.Key != ConsoleKey.Enter)
             {
