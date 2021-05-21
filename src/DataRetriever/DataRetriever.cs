@@ -101,9 +101,11 @@ namespace YOSHI.DataRetrieverNS
                 Console.WriteLine("Filtering detailed commits...");
                 data.CommitsWithinTimeWindow = Filters.FilterDetailedCommits(detailedCommitsWithinTimeWindow, data.MemberUsernames);
 
-                // There must be at least one milestone
-                Console.WriteLine("Retrieving milestones...");
-                data.Milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
+                // There must be at least one closed milestone
+                Console.WriteLine("Retrieving closed milestones...");
+                MilestoneRequest stateFilter = new MilestoneRequest { State = ItemStateFilter.Closed };
+                data.Milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
+                // TODO: Filter Milestones closed today
                 if (data.Milestones.Count < 1)
                 {
                     return false;
@@ -153,10 +155,13 @@ namespace YOSHI.DataRetrieverNS
                     = await RetrieveDataPerMember(repoName, data.MemberUsernames);
 
                 Console.WriteLine("Retrieving pull requests...");
-                List<PullRequest> pullRequestsWithinWindow = await RetrievePullRequests(repoOwner, repoName, data.MemberUsernames);
+                List<PullRequest> pullRequests = await RetrievePullRequests(repoOwner, repoName, data.MemberUsernames);
 
-                Console.WriteLine("Retrieving pull request comments within last 90 days per pull request...");
-                data.MapPullReqsToComments = await RetrieveCommentsPerPullRequest(repoOwner, repoName, pullRequestsWithinWindow, data.MemberUsernames);
+                Console.WriteLine("Retrieving pull request comments...");
+                List<PullRequestReviewComment> pullRequestComments = await RetrievePullRequestComments(repoOwner, repoName, data.MemberUsernames);
+
+                Console.WriteLine("Map pull requests to comments...");
+                data.MapPullReqsToComments = MapPullRequestsToComments(pullRequests, pullRequestComments);
             }
             catch
             {
@@ -335,13 +340,27 @@ namespace YOSHI.DataRetrieverNS
             // We want all pull requests, since they often do not get closed correctly or closed at all, even if they're merged
             PullRequestRequest stateFilter = new PullRequestRequest { State = ItemStateFilter.All };
             IReadOnlyList<PullRequest> pullRequests =
-                await GitHubRateLimitHandler.Delegate(Client.PullRequest.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
+                await GitHubRateLimitHandler.Delegate(Client.PullRequest.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
 
             // Filter out all pull requests outside the time window
             Console.WriteLine("Filtering pull requests outside the time window...");
             List<PullRequest> pullRequestsWithinWindow = Filters.FilterPullRequests(pullRequests, memberUsernames);
 
             return pullRequestsWithinWindow;
+        }
+
+        private static async Task<List<PullRequestReviewComment>> RetrievePullRequestComments(string repoOwner, string repoName, HashSet<string> memberUsernames)
+        {
+            // Retrieve all pull request comments since the start of the time window and filter the comments
+            PullRequestReviewCommentRequest since = new PullRequestReviewCommentRequest { Since = Filters.StartDateTimeWindow };
+            IReadOnlyList<PullRequestReviewComment> comments = await GitHubRateLimitHandler.Delegate(Client.PullRequest.ReviewComment.GetAllForRepository, repoOwner, repoName, since, MaxSizeBatches);
+            // 144 API requests, 3310 comments DEBUG
+            await GitHubRequestsRemaining(); // DEBUG
+
+            Console.WriteLine("Filtering pull request comments...");
+            List<PullRequestReviewComment> filteredComments = Filters.FilterComments(comments, memberUsernames);
+
+            return filteredComments;
         }
 
         /// <summary>
@@ -352,21 +371,34 @@ namespace YOSHI.DataRetrieverNS
         /// <param name="repoOwner">Repository owner</param>
         /// <param name="repoName">Repository name</param>
         /// <returns>A dictionary mapping pull requests to pull request review comments.</returns>
-        private static async Task<Dictionary<PullRequest, List<PullRequestReviewComment>>> RetrieveCommentsPerPullRequest(
-            string repoOwner, string repoName, List<PullRequest> pullRequests, HashSet<string> memberUsernames)
+        private static Dictionary<PullRequest, List<PullRequestReviewComment>> MapPullRequestsToComments(
+            List<PullRequest> pullRequests, List<PullRequestReviewComment> comments)
         {
             Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments =
                 new Dictionary<PullRequest, List<PullRequestReviewComment>>();
+            // Temporarily store the pull requests by number, to easily link them to the comments
+            Dictionary<int, PullRequest> pullRequestByNumber = new Dictionary<int, PullRequest>();
 
-            // Map each pull request to its corresponding comments
             foreach (PullRequest pullRequest in pullRequests)
             {
-                IReadOnlyList<PullRequestReviewComment> pullRequestComments =
-                    await GitHubRateLimitHandler.Delegate(Client.PullRequest.ReviewComment.GetAll, repoOwner, repoName, pullRequest.Number, MaxSizeBatches);
+                mapPullReqsToComments.Add(pullRequest, new List<PullRequestReviewComment>());
+                pullRequestByNumber.Add(pullRequest.Number, pullRequest);
+            }
 
-                List<PullRequestReviewComment> filteredComments = Filters.FilterComments(pullRequestComments, memberUsernames);
-
-                mapPullReqsToComments.Add(pullRequest, filteredComments);
+            // Map the remaining comments to the pull requests
+            foreach (PullRequestReviewComment comment in comments)
+            {
+                try
+                {
+                    int pullRequestNumber = int.Parse(comment.PullRequestUrl.Split('/').Last());
+                    PullRequest pullRequest = pullRequestByNumber[pullRequestNumber];
+                    mapPullReqsToComments[pullRequest].Add(comment);
+                }
+                catch
+                {
+                    // Skip comments that don't have a pull request number in their pull request url.
+                    continue;
+                }
             }
 
             return mapPullReqsToComments;

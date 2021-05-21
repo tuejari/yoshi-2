@@ -64,6 +64,32 @@ namespace YOSHI.DataRetrieverNS
             throw new Exception("Failed too many times to retrieve GitHub data.");
         }
 
+        /// <param name="state">The milestone request applying a state filter. Can be "open", "closed", or "all".
+        /// https://docs.github.com/en/rest/reference/issues#list-milestones
+        /// </param>
+        public async static Task<T> Delegate<T>(
+            Func<string, string, MilestoneRequest, ApiOptions, Task<T>> func,
+            string repoOwner,
+            string repoName,
+            MilestoneRequest state,
+            ApiOptions maxBatchSize)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    Task<T> task = func(repoOwner, repoName, state, maxBatchSize);
+                    return await task;
+                }
+                catch (RateLimitExceededException)
+                {
+                    // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
+                    WaitUntilReset();
+                }
+            }
+            throw new Exception("Failed too many times to retrieve GitHub data.");
+        }
+
         /// <param name="state">The pull request request applying a state filter. Can be "open", "closed", or "all".
         /// https://docs.github.com/en/rest/reference/pulls#list-pull-requests
         /// </param>
@@ -90,6 +116,32 @@ namespace YOSHI.DataRetrieverNS
             throw new Exception("Failed too many times to retrieve GitHub data.");
         }
 
+        /// <param name="since">Only comments updated at or after this time are returned.
+        /// https://docs.github.com/en/rest/reference/pulls#list-review-comments-in-a-repository
+        /// </param>
+        public async static Task<T> Delegate<T>(
+            Func<string, string, PullRequestReviewCommentRequest, ApiOptions, Task<T>> func,
+            string repoOwner,
+            string repoName,
+            PullRequestReviewCommentRequest since,
+            ApiOptions maxBatchSize)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    Task<T> task = func(repoOwner, repoName, since, maxBatchSize);
+                    return await task;
+                }
+                catch (RateLimitExceededException)
+                {
+                    // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
+                    WaitUntilReset();
+                }
+            }
+            throw new Exception("Failed too many times to retrieve GitHub data.");
+        }
+
         /// <param name="id">An extra paramater to specify an ID to get a specific item from a repository.</param>
         public async static Task<T> Delegate<T>(
             Func<string, string, int, ApiOptions, Task<T>> func,
@@ -103,31 +155,6 @@ namespace YOSHI.DataRetrieverNS
                 try
                 {
                     Task<T> task = func(repoOwner, repoName, id, maxBatchSize);
-                    return await task;
-                }
-                catch (RateLimitExceededException)
-                {
-                    // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
-                    WaitUntilReset();
-                }
-            }
-            throw new Exception("Failed too many times to retrieve GitHub data.");
-        }
-
-        /// <param name="commitRequest">An extra paramater to specify the tree path when retrieving commits. 
-        /// This allows us to retrieve all commits affecting a specific file.</param>
-        public async static Task<T> Delegate<T>(
-            Func<string, string, CommitRequest, ApiOptions, Task<T>> func,
-            string repoOwner,
-            string repoName,
-            CommitRequest commitRequest,
-            ApiOptions maxBatchSize)
-        {
-            for (int i = 0; i < 3; i++)
-            {
-                try
-                {
-                    Task<T> task = func(repoOwner, repoName, commitRequest, maxBatchSize);
                     return await task;
                 }
                 catch (RateLimitExceededException)
@@ -207,7 +234,7 @@ namespace YOSHI.DataRetrieverNS
                 DateTimeOffset limitReset = (DateTimeOffset)whenDoesTheLimitReset;
                 timespan = (DateTimeOffset)whenDoesTheLimitReset - DateTimeOffset.Now;
                 timespan = timespan.Add(TimeSpan.FromSeconds(30)); // Add 30 seconds to the timespan
-                
+
                 Console.WriteLine("GitHub Rate Limit reached.");
                 Console.WriteLine("Waiting until: " + limitReset.AddSeconds(30).DateTime.ToLocalTime().ToString());
             }
