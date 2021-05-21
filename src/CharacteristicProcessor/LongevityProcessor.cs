@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using YOSHI.CommunityData;
+using YOSHI.DataRetrieverNS;
 
 namespace YOSHI.CharacteristicProcessorNS
 {
@@ -31,14 +32,24 @@ namespace YOSHI.CharacteristicProcessorNS
             Dictionary<string, List<DateTime>> mapUserCommitDate = new Dictionary<string, List<DateTime>>();
             foreach (GitHubCommit commit in commits)
             {
-                string committer = commit.Committer.Login;
-                if (committer != null && memberUsernames.Contains(committer))
+                if (Filters.ValidCommitter(commit, memberUsernames))
                 {
+                    string committer = commit.Committer.Login;
                     if (!mapUserCommitDate.ContainsKey(committer))
                     {
                         mapUserCommitDate.Add(committer, new List<DateTime>());
                     }
                     mapUserCommitDate[committer].Add(commit.Commit.Committer.Date.Date);
+                }
+
+                if (Filters.ValidAuthor(commit, memberUsernames))
+                {
+                    string author = commit.Author.Login;
+                    if (!mapUserCommitDate.ContainsKey(author))
+                    {
+                        mapUserCommitDate.Add(author, new List<DateTime>());
+                    }
+                    mapUserCommitDate[author].Add(commit.Commit.Author.Date.Date);
                 }
             }
 
@@ -51,16 +62,17 @@ namespace YOSHI.CharacteristicProcessorNS
                 // NOTE: this limits the metric, as we do not compute the longevity for each member.
                 DateTime dateFirstCommit = DateTimeOffset.MaxValue.Date;
                 DateTime dateLastCommit = DateTimeOffset.MinValue.Date;
-                foreach (DateTime commitDate in userCommitDate.Value)
+                foreach (DateTime dateCurrentCommit in userCommitDate.Value)
                 {
                     // If current earliest commit is later than current commit
-                    if (dateFirstCommit.CompareTo(commitDate) > 0)
+                    if (dateFirstCommit.CompareTo(dateCurrentCommit) > 0)
                     {
-                        dateFirstCommit = commitDate;
-                    } // If current latest commit is earlier than current commit
-                    if (dateLastCommit.CompareTo(commitDate) < 0)
+                        dateFirstCommit = dateCurrentCommit;
+                    }
+                    // If current latest commit is earlier than current commit
+                    if (dateLastCommit.CompareTo(dateCurrentCommit) < 0)
                     {
-                        dateLastCommit = commitDate;
+                        dateLastCommit = dateCurrentCommit;
                     }
                 }
                 // Add the difference between committers first and last commits to the total commit longevity

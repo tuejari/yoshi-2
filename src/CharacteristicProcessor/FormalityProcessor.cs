@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using YOSHI.CommunityData;
 using YOSHI.CommunityData.MetricData;
+using YOSHI.DataRetrieverNS;
 
 namespace YOSHI.CharacteristicProcessorNS
 {
@@ -18,7 +19,7 @@ namespace YOSHI.CharacteristicProcessorNS
             Formality formality = community.Metrics.Formality;
             formality.MeanMembershipType = MeanMembershipType(community.Data.CommitsWithinTimeWindow, community.Data.MemberUsernames);
             formality.Milestones = community.Data.Milestones.Count;
-            formality.Lifetime = ProjectLifetimeInDays(community.Data.Commits);
+            formality.Lifetime = ProjectLifetimeInDays(community.Data.Commits, community.Data.MemberUsernames);
 
             community.Characteristics.Formality = (float)formality.MeanMembershipType / (formality.Milestones / formality.Lifetime);
         }
@@ -36,8 +37,12 @@ namespace YOSHI.CharacteristicProcessorNS
 
             foreach (GitHubCommit commit in commits)
             {
-                committers.Add(commit.Committer.Login);
-                if (commit.Author != null && commit.Author.Login != null && memberUsernames.Contains(commit.Author.Login))
+                if (Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames))
+                {
+                    committers.Add(commit.Committer.Login);
+                }
+
+                if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames))
                 {
                     committers.Add(commit.Author.Login);
                 }
@@ -62,7 +67,7 @@ namespace YOSHI.CharacteristicProcessorNS
         /// </summary>
         /// <param name="commits">A list of commits from a repository.</param>
         /// <returns>The project lifetime in number of days.</returns>
-        private static int ProjectLifetimeInDays(IReadOnlyList<GitHubCommit> commits)
+        private static int ProjectLifetimeInDays(IReadOnlyList<GitHubCommit> commits, HashSet<string> memberUsernames)
         {
             // We use committer date instead of author date, since that's when the commit was last applied.
             // Source: https://stackoverflow.com/questions/18750808/difference-between-author-and-committer-in-git
@@ -70,15 +75,35 @@ namespace YOSHI.CharacteristicProcessorNS
             DateTime dateLastCommit = DateTimeOffset.MinValue.Date;
             foreach (GitHubCommit commit in commits)
             {
-                DateTime commitDate = commit.Commit.Committer.Date.Date;
-                // If current earliest commit is later than current commit
-                if (dateFirstCommit.CompareTo(commitDate) > 0)
+                // TODO: Reduce code duplication
+                if (Filters.ValidCommitter(commit, memberUsernames))
                 {
-                    dateFirstCommit = commitDate;
-                } // If current latest commit is earlier than current commit
-                if (dateLastCommit.CompareTo(commitDate) < 0)
+                    DateTime dateCurrentCommit = commit.Commit.Committer.Date.Date;
+                    // If current earliest commit is later than current commit
+                    if (dateFirstCommit.CompareTo(dateCurrentCommit) > 0)
+                    {
+                        dateFirstCommit = dateCurrentCommit;
+                    }
+                    // If current latest commit is earlier than current commit
+                    if (dateLastCommit.CompareTo(dateCurrentCommit) < 0)
+                    {
+                        dateLastCommit = dateCurrentCommit;
+                    }
+                }
+
+                if (Filters.ValidAuthor(commit, memberUsernames))
                 {
-                    dateLastCommit = commitDate;
+                    DateTime dateCurrentCommit = commit.Commit.Author.Date.Date;
+                    // If current earliest commit is later than current commit
+                    if (dateFirstCommit.CompareTo(dateCurrentCommit) > 0)
+                    {
+                        dateFirstCommit = dateCurrentCommit;
+                    }
+                    // If current latest commit is earlier than current commit
+                    if (dateLastCommit.CompareTo(dateCurrentCommit) < 0)
+                    {
+                        dateLastCommit = dateCurrentCommit;
+                    }
                 }
             }
             TimeSpan timespan = dateLastCommit - dateFirstCommit;

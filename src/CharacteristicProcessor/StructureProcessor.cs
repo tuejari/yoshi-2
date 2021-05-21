@@ -101,7 +101,7 @@ namespace YOSHI.CharacteristicProcessorNS
         private static bool AddPullReqConnections(
             ref Graph<string> structureGraph,
             Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments,
-            HashSet<string> members)
+            HashSet<string> memberUsernames)
         {
             bool pullReqConnection = false;
             // Add the connections for each pull request commenter and author
@@ -110,14 +110,14 @@ namespace YOSHI.CharacteristicProcessorNS
                 string pullReqAuthor = mapPullReqToComments.Key.User.Login;
                 // Make sure that the pull request author is also a member
                 // (i.e., whether they committed to this repository at least once)
-                if (pullReqAuthor != null && members.Contains(pullReqAuthor))
+                if (pullReqAuthor != null && memberUsernames.Contains(pullReqAuthor))
                 {
                     foreach (PullRequestReviewComment comment in mapPullReqToComments.Value)
                     {
                         string pullReqCommenter = comment.User.Login;
                         // Make sure that the pull request commenter is also a member
                         // (i.e., whether they committed to this repository at least once)
-                        if (pullReqCommenter != null && members.Contains(pullReqCommenter))
+                        if (pullReqCommenter != null && memberUsernames.Contains(pullReqCommenter))
                         {
                             // Two members have had a recent pull request interaction.
                             structureGraph.AddEdge(pullReqAuthor, pullReqCommenter);

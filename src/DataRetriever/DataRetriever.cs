@@ -1,6 +1,7 @@
 ﻿using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using YOSHI.CommunityData;
 using YOSHI.DataRetrieverNS.Geocoding;
@@ -56,6 +57,7 @@ namespace YOSHI.DataRetrieverNS
             // Inspection of projects, requirements are at least 100 commits, at least 10 members, at least 50,000 LOC, must use milestones and issues
             try
             {
+                // TODO: Check whether all GitHub data is limited to the time window (e.g., no remaining data from today, only data from 90 days before today)
                 await GitHubRequestsRemaining();
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("Bing Maps API requests remaining: {0}", GeoService.BingRequestsLeft);
@@ -64,26 +66,12 @@ namespace YOSHI.DataRetrieverNS
                 // There must be at least 100 commits
                 Console.WriteLine("Retrieving all commits...");
                 IReadOnlyList<GitHubCommit> commits = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.GetAll, repoOwner, repoName, MaxSizeBatches);
-                if (commits.Count < 100)
-                {
-                    return false;
-                }
 
                 Console.WriteLine("Filtering commits...");
-                data.CommitsWithinTimeWindow = Filters.FilterCommits(commits);
-
-                Console.WriteLine("Retrieve commit details..."); // Necessary to retrieve what files were changed each commit
-                List<GitHubCommit> detailedCommitsWithinTimeWindow = new List<GitHubCommit>();
-                foreach (GitHubCommit commit in data.CommitsWithinTimeWindow)
-                {
-                    GitHubCommit detailedCommit = await Client.Repository.Commit.Get(repoOwner, repoName, commit.Sha);
-                    detailedCommitsWithinTimeWindow.Add(detailedCommit);
-                }
-                Console.WriteLine("Filtering detailed commits...");
-                data.CommitsWithinTimeWindow = Filters.FilterDetailedCommits(detailedCommitsWithinTimeWindow);
+                List<GitHubCommit> commitsWithinTimeWindow = Filters.ExtractCommitsWithinTimeWindow(commits);
 
                 Console.WriteLine("Extracting usernames from commits...");
-                data.MemberUsernames = Filters.ExtractUsernamesFromCommits(data.CommitsWithinTimeWindow);
+                data.MemberUsernames = Filters.ExtractUsernamesFromCommits(commitsWithinTimeWindow);
 
                 // There must be at least 10 members (active in the last 90 days)
                 Console.WriteLine("Retrieving user data...");
@@ -92,8 +80,26 @@ namespace YOSHI.DataRetrieverNS
                 {
                     return false;
                 }
-                Console.WriteLine("Filtering commits from non-members...");
+
+                // TODO: Filter commits from today
+                Console.WriteLine("Filtering all commits from non-members...");
                 data.Commits = Filters.FilterAllCommits(commits, data.MemberUsernames);
+                if (commits.Count < 100)
+                {
+                    return false;
+                }
+
+                Console.WriteLine("Extract commits within time window...");
+                commitsWithinTimeWindow = Filters.ExtractCommitsWithinTimeWindow(data.Commits);
+                Console.WriteLine("Retrieve commit details..."); // Necessary to retrieve what files were changed each commit
+                List<GitHubCommit> detailedCommitsWithinTimeWindow = new List<GitHubCommit>();
+                foreach (GitHubCommit commit in commitsWithinTimeWindow)
+                {
+                    GitHubCommit detailedCommit = await Client.Repository.Commit.Get(repoOwner, repoName, commit.Sha);
+                    detailedCommitsWithinTimeWindow.Add(detailedCommit);
+                }
+                Console.WriteLine("Filtering detailed commits...");
+                data.CommitsWithinTimeWindow = Filters.FilterDetailedCommits(detailedCommitsWithinTimeWindow, data.MemberUsernames);
 
                 // There must be at least one milestone
                 Console.WriteLine("Retrieving milestones...");
@@ -201,6 +207,9 @@ namespace YOSHI.DataRetrieverNS
                 throw;
             }
 
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("Retrieved all GitHub data for this community.");
+            Console.ResetColor();
             await GitHubRequestsRemaining();
         }
 
@@ -215,13 +224,33 @@ namespace YOSHI.DataRetrieverNS
         {
             List<User> members = new List<User>();
             HashSet<string> updatedUsernames = new HashSet<string>(); // A separate list to exclude usernames that cause exceptions
+            HashSet<string> bots = new HashSet<string>();
+            HashSet<string> organizations = new HashSet<string>();
             foreach (string username in usernames)
             {
                 try
                 {
                     User user = await GitHubRateLimitHandler.Delegate(Client.User.Get, username);
-                    members.Add(user);
-                    updatedUsernames.Add(username);
+
+                    // Exclude organizations and bots
+                    // Note: not all bots/organizations have the correct accounttype. We are bound to let through some
+                    // bots/organizations this way, but it is better than nothing.
+                    if (user.Type == AccountType.User)
+                    {
+                        members.Add(user);
+                        updatedUsernames.Add(username);
+                    }
+                    else
+                    {
+                        if (user.Type == AccountType.Bot)
+                        {
+                            bots.Add(user.Login);
+                        }
+                        else // organization
+                        {
+                            organizations.Add(user.Login);
+                        }
+                    }
                 }
                 catch
                 {
@@ -229,6 +258,29 @@ namespace YOSHI.DataRetrieverNS
                     continue;
                 }
             }
+
+            // Report whether any bots were identified
+            Console.ForegroundColor = ConsoleColor.Blue;
+            if (bots.Count > 0)
+            {
+                Console.WriteLine("The following users were classified as a bot: ");
+                foreach (string bot in bots)
+                {
+                    Console.WriteLine(bot);
+                }
+            }
+
+            // Report whether any organizations were identifed
+            if (organizations.Count > 0)
+            {
+                Console.WriteLine("The following users were classified as an organization: ");
+                foreach (string org in organizations)
+                {
+                    Console.WriteLine(org);
+                }
+            }
+            Console.ResetColor();
+
             return (members, updatedUsernames);
         }
 

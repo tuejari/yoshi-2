@@ -65,17 +65,17 @@ namespace YOSHI.CharacteristicProcessorNS
         /// </summary>
         /// <param name="commitComments"></param>
         /// <param name="pullReqComments"></param>
-        /// <param name="members"></param>
+        /// <param name="memberUsernames"></param>
         /// <returns></returns>
-        private static double MedianMonthlyCommentsDistribution(IReadOnlyList<CommitComment> commitComments, List<PullRequestReviewComment> pullReqComments, HashSet<string> members)
+        private static double MedianMonthlyCommentsDistribution(IReadOnlyList<CommitComment> commitComments, List<PullRequestReviewComment> pullReqComments, HashSet<string> memberUsernames)
         {
             // Store the dates of the comments per member, so we can count the number of comments per month for each member
             // TODO: Maybe move to filter (for pre-processing)
             Dictionary<string, List<DateTimeOffset>> commentDatesPerMember = new Dictionary<string, List<DateTimeOffset>>();
 
-            foreach (string member in members)
+            foreach (string username in memberUsernames)
             {
-                commentDatesPerMember.Add(member, new List<DateTimeOffset>());
+                commentDatesPerMember.Add(username, new List<DateTimeOffset>());
             }
 
             foreach (CommitComment comment in commitComments)
@@ -85,20 +85,20 @@ namespace YOSHI.CharacteristicProcessorNS
             foreach (PullRequestReviewComment comment in pullReqComments)
             {
                 commentDatesPerMember[comment.User.Login].Add(comment.CreatedAt);
-            }   
+            }
 
             List<double> meanCommentsPerMonthPerMember = new List<double>();
-            foreach (string member in members) 
+            foreach (string username in memberUsernames)
             {
                 // Check for each comment in which month it took place and compute the average comments per month for this member
                 List<int> nrCommentsPerMonth = new List<int> { 0, 0, 0 };
-                foreach (DateTimeOffset date in commentDatesPerMember[member])
+                foreach (DateTimeOffset date in commentDatesPerMember[username])
                 {
                     nrCommentsPerMonth[CheckMonth(date)]++;
                 }
                 // TODO: Currently not yet a distribution
                 meanCommentsPerMonthPerMember.Add(nrCommentsPerMonth.Average());
-            }  
+            }
 
             return Statistics.ComputeMedian(meanCommentsPerMonthPerMember);
         }
@@ -127,15 +127,15 @@ namespace YOSHI.CharacteristicProcessorNS
         /// member whether they are contained in the set of users (1) or not (0). Then compute the median of that list.
         /// </summary>
         /// <param name="users">A set of users.</param>
-        /// <param name="members">A set of members.</param>
+        /// <param name="memberUsernames">A set of members.</param>
         /// <returns>The median value whether members occur in the set of users.</returns>
-        private static double MedianContains(HashSet<string> users, HashSet<string> members)
+        private static double MedianContains(HashSet<string> users, HashSet<string> memberUsernames)
         {
             List<int> userValues = new List<int>();
-            foreach (string member in members)
+            foreach (string username in memberUsernames)
             {
                 // Check if the member occurs in the list of users
-                if (users.Contains(member))
+                if (users.Contains(username))
                 {
                     userValues.Add(1);
                 }
@@ -151,24 +151,27 @@ namespace YOSHI.CharacteristicProcessorNS
         /// 
         /// </summary>
         /// <param name="commitsWithinWindow"></param>
-        /// <param name="members"></param>
+        /// <param name="memberUsernames"></param>
         /// <returns></returns>
-        private static double MedianCommitDistribution(List<GitHubCommit> commitsWithinWindow, HashSet<string> members)
+        private static double MedianCommitDistribution(List<GitHubCommit> commitsWithinWindow, HashSet<string> memberUsernames)
         {
             // TODO: Compute per month
 
             Dictionary<string, int> nrCommitsPerUser = new Dictionary<string, int>();
-            foreach (string member in members)
+            foreach (string username in memberUsernames)
             {
-                nrCommitsPerUser.Add(member, 0);
+                nrCommitsPerUser.Add(username, 0);
             }
 
             foreach (GitHubCommit commit in commitsWithinWindow)
             {
                 // Note: all commits within the timewindow have already accessed committer, so we do not need to check
                 // that committer is not null.
-                nrCommitsPerUser[commit.Committer.Login]++;
-                if (commit.Author != null && commit.Author.Login != null && Filters.CheckWithinTimeWindow(commit.Commit.Author.Date))
+                if (Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames))
+                {
+                    nrCommitsPerUser[commit.Committer.Login]++;
+                }
+                if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames))
                 {
                     nrCommitsPerUser[commit.Author.Login]++;
                 }
@@ -181,9 +184,9 @@ namespace YOSHI.CharacteristicProcessorNS
         /// 
         /// </summary>
         /// <param name="commits"></param>
-        /// <param name="members"></param>
+        /// <param name="memberUsernames"></param>
         /// <returns></returns>
-        private static double MedianFileCollabDistribution(List<GitHubCommit> commits, HashSet<string> members)
+        private static double MedianFileCollabDistribution(List<GitHubCommit> commits, HashSet<string> memberUsernames)
         {
             // TODO: Compute per month
 
@@ -191,7 +194,7 @@ namespace YOSHI.CharacteristicProcessorNS
             (
                 HashSet<(string, string)> changedFileNames,
                 Dictionary<string, HashSet<string>> committersPerFile
-            ) = ExtractCommittersPerFile(commits, members);
+            ) = ExtractCommittersPerFile(commits, memberUsernames);
 
             // Extract largest non-overlapping sets of changed filenames
             Graph<string> filenamesGraph = new Graph<string>();
@@ -259,10 +262,10 @@ namespace YOSHI.CharacteristicProcessorNS
         /// modified that file, while keeping track of name changes.
         /// </summary>
         /// <param name="commits"></param>
-        /// <param name="members"></param>
+        /// <param name="memberUsernames"></param>
         /// <returns></returns>
         private static (HashSet<(string, string)>, Dictionary<string, HashSet<string>>)
-            ExtractCommittersPerFile(List<GitHubCommit> commits, HashSet<string> members)
+            ExtractCommittersPerFile(List<GitHubCommit> commits, HashSet<string> memberUsernames)
         {
             HashSet<(string, string)> changedFileNames = new HashSet<(string, string)>(); // Used to keep track of changed filenames.
             Dictionary<string, HashSet<string>> committersPerFile = new Dictionary<string, HashSet<string>>(); // Used to keep track of the unique committers/authors per file. 
@@ -281,17 +284,18 @@ namespace YOSHI.CharacteristicProcessorNS
                         }
 
                         // Check if we previously saw this file, add as key to the dictionary, add the committer to its value
-                        if (committersPerFile.ContainsKey(file.Filename))
+                        if (!committersPerFile.ContainsKey(file.Filename))
+                        {
+                            committersPerFile.Add(file.Filename, new HashSet<string>());
+                        }
+
+                        if (Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames))
                         {
                             committersPerFile[file.Filename].Add(commit.Committer.Login);
                         }
-                        else
-                        {
-                            committersPerFile.Add(file.Filename, new HashSet<string> { commit.Committer.Login });
-                        }
 
                         // Add the commit author to the current file's entry in the dictionary
-                        if (commit.Author != null && commit.Author.Login != null && members.Contains(commit.Author.Login))
+                        if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames))
                         {
                             committersPerFile[file.Filename].Add(commit.Author.Login);
                         }
