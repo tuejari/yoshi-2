@@ -27,7 +27,7 @@ namespace YOSHI.DataRetrieverNS
             try
             {
                 // Read the GitHub Access Token and the Bing Maps Key from Windows Environment Variables
-                string githubAccessToken = Environment.GetEnvironmentVariable("YOSHI_GitHubAccessToken"); // TODO: Maybe use application / oauth key
+                string githubAccessToken = Environment.GetEnvironmentVariable("YOSHI_GitHubAccessToken");
 
                 // Set the GitHub Client and set the authentication token from GitHub for the GitHub REST API
                 Client = new GitHubClient(new ProductHeaderValue("yoshi"));
@@ -57,7 +57,7 @@ namespace YOSHI.DataRetrieverNS
             // Inspection of projects, requirements are at least 100 commits, at least 10 members, at least 50,000 LOC, must use milestones and issues
             try
             {
-                // TODO: Check whether all GitHub data is limited to the time window (e.g., no remaining data from today, only data from 90 days before today)
+                // TODO: Done. Check whether all GitHub data is limited to the time window (e.g., no remaining data from today, only data from 90 days before today)
                 await GitHubRequestsRemaining();
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("Bing Maps API requests remaining: {0}", GeoService.BingRequestsLeft);
@@ -81,7 +81,6 @@ namespace YOSHI.DataRetrieverNS
                     return false;
                 }
 
-                // TODO: Filter commits from today
                 Console.WriteLine("Filtering all commits from non-members...");
                 data.Commits = Filters.FilterAllCommits(commits, data.MemberUsernames);
                 if (commits.Count < 100)
@@ -95,7 +94,7 @@ namespace YOSHI.DataRetrieverNS
                 List<GitHubCommit> detailedCommitsWithinTimeWindow = new List<GitHubCommit>();
                 foreach (GitHubCommit commit in commitsWithinTimeWindow)
                 {
-                    GitHubCommit detailedCommit = await Client.Repository.Commit.Get(repoOwner, repoName, commit.Sha);
+                    GitHubCommit detailedCommit = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.Get, repoOwner, repoName, commit.Sha);
                     detailedCommitsWithinTimeWindow.Add(detailedCommit);
                 }
                 Console.WriteLine("Filtering detailed commits...");
@@ -104,8 +103,9 @@ namespace YOSHI.DataRetrieverNS
                 // There must be at least one closed milestone
                 Console.WriteLine("Retrieving closed milestones...");
                 MilestoneRequest stateFilter = new MilestoneRequest { State = ItemStateFilter.Closed };
-                data.Milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
-                // TODO: Filter Milestones closed today
+                IReadOnlyList<Milestone> milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
+                Console.WriteLine("Filtering milestones...");
+                data.Milestones = Filters.FilterMilestones(milestones);
                 if (data.Milestones.Count < 1)
                 {
                     return false;
@@ -190,7 +190,7 @@ namespace YOSHI.DataRetrieverNS
             {
                 // A member is considered active if they made a commit in the last 30 days
                 Console.WriteLine("Extracting active users...");
-                data.ActiveMembers = Filters.ExtractUsernamesFromCommits(data.CommitsWithinTimeWindow, 30);
+                data.ActiveMembers = Filters.ExtractMembersFromCommits(data.CommitsWithinTimeWindow, data.MemberUsernames, 30);
 
                 Console.WriteLine("Retrieving commit comments...");
                 IReadOnlyList<CommitComment> commitComments = await GitHubRateLimitHandler.Delegate(Client.Repository.Comment.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
@@ -354,6 +354,7 @@ namespace YOSHI.DataRetrieverNS
             // Retrieve all pull request comments since the start of the time window and filter the comments
             PullRequestReviewCommentRequest since = new PullRequestReviewCommentRequest { Since = Filters.StartDateTimeWindow };
             IReadOnlyList<PullRequestReviewComment> comments = await GitHubRateLimitHandler.Delegate(Client.PullRequest.ReviewComment.GetAllForRepository, repoOwner, repoName, since, MaxSizeBatches);
+
             // 144 API requests, 3310 comments DEBUG
             await GitHubRequestsRemaining(); // DEBUG
 
@@ -391,7 +392,7 @@ namespace YOSHI.DataRetrieverNS
                 try
                 {
                     int pullRequestNumber = int.Parse(comment.PullRequestUrl.Split('/').Last());
-                    PullRequest pullRequest = pullRequestByNumber[pullRequestNumber];
+                    PullRequest pullRequest = pullRequestByNumber[pullRequestNumber]; // TODO: non-matching key 9973, 10977
                     mapPullReqsToComments[pullRequest].Add(comment);
                 }
                 catch
@@ -414,6 +415,7 @@ namespace YOSHI.DataRetrieverNS
             RateLimit rateLimit = apiInfo?.RateLimit;
             if (rateLimit == null)
             {
+                // Note: This is a free API call.
                 MiscellaneousRateLimit miscellaneousRateLimit = await Client.Miscellaneous.GetRateLimits();
                 rateLimit = miscellaneousRateLimit.Rate;
             }

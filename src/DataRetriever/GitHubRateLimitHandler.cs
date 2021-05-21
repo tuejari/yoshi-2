@@ -41,6 +41,29 @@ namespace YOSHI.DataRetrieverNS
             throw new Exception("Failed too many times to retrieve GitHub data.");
         }
 
+        /// <param name="sha">Commit sha of the commit to retrieve.</param>
+        public async static Task<T> Delegate<T>(
+            Func<string, string, string, Task<T>> func,
+            string repoOwner,
+            string repoName,
+            string sha)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    Task<T> task = func(repoOwner, repoName, sha);
+                    return await task;
+                }
+                catch (RateLimitExceededException)
+                {
+                    // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
+                    WaitUntilReset();
+                }
+            }
+            throw new Exception("Failed too many times to retrieve GitHub data.");
+        }
+
         /// <param name="maxBatchSize">Setting API options to retrieve max batch sizes, reducing the number of requests.</param>
         public async static Task<T> Delegate<T>(
             Func<string, string, ApiOptions, Task<T>> func,
@@ -243,7 +266,9 @@ namespace YOSHI.DataRetrieverNS
                 // If we don't know the reset time, we wait the default time of 1 hour
                 Console.WriteLine("Waiting until: " + DateTimeOffset.Now.DateTime.ToLocalTime().AddHours(1));
             }
+            Console.ResetColor(); // Reset before sleep, otherwise color remains even when application is closed during the sleep.
             Thread.Sleep(timespan); // Wait until the rate limit resets
+            Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine("Done waiting for the rate limit reset, continuing now: " + DateTimeOffset.Now.DateTime.ToLocalTime().ToString());
             Console.ResetColor();
         }

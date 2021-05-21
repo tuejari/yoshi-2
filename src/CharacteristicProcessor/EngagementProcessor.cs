@@ -43,7 +43,6 @@ namespace YOSHI.CharacteristicProcessorNS
         /// pull request comments per pull request, and compute the median. 
         /// </summary>
         /// <param name="mapPullReqsToComments">A mapping from pull requests to their corresponding comments.</param>
-        /// <param name="members">A set of members within the last 90 days.</param>
         /// <returns>The median value of pull request review comments per member.</returns>
         private static double MedianNrCommentsPerPullReq(Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments)
         {
@@ -61,16 +60,15 @@ namespace YOSHI.CharacteristicProcessorNS
         }
 
         /// <summary>
-        /// Computes the median of all members monthly comments. TODO: update contract
+        /// Computes the median of all members' average (commit/pull-request) comments per month in the last 3 months. 
         /// </summary>
-        /// <param name="commitComments"></param>
-        /// <param name="pullReqComments"></param>
-        /// <param name="memberUsernames"></param>
-        /// <returns></returns>
+        /// <param name="commitComments">A list of commit comments</param>
+        /// <param name="pullReqComments">A list of pull request comments</param>
+        /// <param name="memberUsernames">A list of member usernames</param>
+        /// <returns>The median of all members' average (commit/pull-request) comments per month in the last 3 months.</returns>
         private static double MedianMonthlyCommentsDistribution(IReadOnlyList<CommitComment> commitComments, List<PullRequestReviewComment> pullReqComments, HashSet<string> memberUsernames)
         {
             // Store the dates of the comments per member, so we can count the number of comments per month for each member
-            // TODO: Maybe move to filter (for pre-processing)
             Dictionary<string, List<DateTimeOffset>> commentDatesPerMember = new Dictionary<string, List<DateTimeOffset>>();
 
             foreach (string username in memberUsernames)
@@ -134,7 +132,6 @@ namespace YOSHI.CharacteristicProcessorNS
             List<int> userValues = new List<int>();
             foreach (string username in memberUsernames)
             {
-                // Check if the member occurs in the list of users
                 if (users.Contains(username))
                 {
                     userValues.Add(1);

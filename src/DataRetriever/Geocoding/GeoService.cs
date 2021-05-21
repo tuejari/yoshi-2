@@ -36,8 +36,9 @@ namespace YOSHI.DataRetrieverNS.Geocoding
                     {
                         BingAddress address = await GetBingAddress(member.Location);
                         addresses.Add(address);
-                    } // TODO: Should we filter out all users that we do not have complete information from?
-                    // Note: Probably not, it could filter out information too aggressively.
+                    }
+                    // Note: We do not filter out all users that we do not have complete information from,
+                    // it could filter out information too aggressively.
                 }
                 catch (BingGeocodingException e)
                 {

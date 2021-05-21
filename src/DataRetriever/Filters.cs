@@ -11,7 +11,15 @@ namespace YOSHI.DataRetrieverNS
     public static class Filters
     {
         public static readonly DateTime EndDateTimeWindow = new DateTimeOffset(DateTime.Today).Date;
-        public static readonly DateTime StartDateTimeWindow = EndDateTimeWindow.AddDays(-90).Date;
+        public static readonly DateTime StartDateTimeWindow;
+
+        static Filters()
+        {
+            int days = 90; // snapshot period of 3 months (approximated using 90 days)
+            // Note: Currently other periods are not supported.
+            // Engagementprocessor uses hardcoded month thresholds of 30 and 60
+            StartDateTimeWindow = EndDateTimeWindow.AddDays(-days).Date;
+        }
 
         /// <summary>
         /// Extracts commits committed within the given time window (default 3 months, approximated using 90 days). 
@@ -69,7 +77,9 @@ namespace YOSHI.DataRetrieverNS
             List<GitHubCommit> filteredCommits = new List<GitHubCommit>();
             foreach (GitHubCommit commit in commits)
             {
-                if (ValidCommitter(commit, memberUsernames) || ValidAuthor(commit, memberUsernames))
+                // Note: filter out commits from today
+                if ((ValidCommitter(commit, memberUsernames) || ValidAuthor(commit, memberUsernames))
+                    && (commit.Commit.Committer.Date < EndDateTimeWindow || commit.Commit.Author.Date < EndDateTimeWindow))
                 {
                     filteredCommits.Add(commit);
                 }
@@ -90,8 +100,11 @@ namespace YOSHI.DataRetrieverNS
             HashSet<string> usernames = new HashSet<string>();
             foreach (GitHubCommit commit in commits)
             {
-                // Note: all commits in timewindow have already been filtered such that committers have usernames
-                usernames.Add(commit.Committer.Login);
+                // Check that committer date also falls within the time window before adding the author in the list of members
+                if (commit.Committer != null && commit.Committer.Login != null && CheckWithinTimeWindow(commit.Commit.Committer.Date, days))
+                {
+                    usernames.Add(commit.Committer.Login);
+                }
                 // Check that author date also falls within the time window before adding the author in the list of members
                 if (commit.Author != null && commit.Author.Login != null && CheckWithinTimeWindow(commit.Commit.Author.Date, days))
                 {
@@ -100,6 +113,57 @@ namespace YOSHI.DataRetrieverNS
             }
             // TODO: Apply alias resolution
             return usernames;
+        }
+
+        /// <summary>
+        /// This method retrieves all User objects and usernames for all committers and commit authors in the last 90
+        /// days. Note: It is possible that open pull request authors have commits on their own forks. These are not detected 
+        /// as members as they have not yet made a contribution. 
+        /// </summary>
+        /// <param name="commits">A list of commits</param>
+        /// <returns>A tuple containing a list of users and a list of usernames.</returns>
+        public static HashSet<string> ExtractMembersFromCommits(List<GitHubCommit> commits, HashSet<string> memberUsernames, int days = 90)
+        {
+            // Get the user info of all members that have made at least one commit in the last 90 days
+            HashSet<string> usernames = new HashSet<string>();
+            foreach (GitHubCommit commit in commits)
+            {
+                // Check that committer date also falls within the time window before adding the author in the list of members
+                if (commit.Committer != null && commit.Committer.Login != null
+                    && memberUsernames.Contains(commit.Committer.Login) && CheckWithinTimeWindow(commit.Commit.Committer.Date, days))
+                {
+                    usernames.Add(commit.Committer.Login);
+                }
+                // Check that author date also falls within the time window before adding the author in the list of members
+                if (commit.Author != null && commit.Author.Login != null
+                    && memberUsernames.Contains(commit.Author.Login) && CheckWithinTimeWindow(commit.Commit.Author.Date, days))
+                {
+                    usernames.Add(commit.Author.Login);
+                }
+            }
+            // TODO: Apply alias resolution
+            return usernames;
+        }
+
+        /// <summary>
+        /// Filter milestones from today. We only take all  milestones that were closed prior to today.
+        /// </summary>
+        /// <param name="milestones">A list of milestones.</param>
+        /// <returns>A list of milestones that were last updated before today.</returns>
+        public static IReadOnlyList<Milestone> FilterMilestones(IReadOnlyList<Milestone> milestones)
+        {
+            List<Milestone> filteredMilestones = new List<Milestone>();
+
+            foreach (Milestone milestone in milestones)
+            {
+                // Remove closed milestones that were updated after the time window.
+                if (milestone.UpdatedAt < EndDateTimeWindow)
+                {
+                    filteredMilestones.Add(milestone);
+                }
+            }
+
+            return filteredMilestones;
         }
 
         /// <summary>
@@ -136,6 +200,12 @@ namespace YOSHI.DataRetrieverNS
             List<PullRequest> filteredPullRequests = new List<PullRequest>();
             foreach (PullRequest pullRequest in pullRequests)
             {
+                // TODO: BUG: If the last update was today, it will be excluded, even if other parts were within the
+                // 3-month time window
+                // If we also check for createdAt within the 3-month window, we would still be able to exclude pull
+                // requests where the created at is before the 3 month, update in the 3 months and last update today
+                // Not sure how to deal with this yet. (Problem not just related to pull requests, also comments and
+                // milestones). Need to check all UpdatedAt, CreatedAt, ClosedAt, MergedAt
                 if (CheckWithinTimeWindow(pullRequest.UpdatedAt) && pullRequest.User != null
                     && pullRequest.User.Login != null && memberUsernames.Contains(pullRequest.User.Login))
                 {
@@ -177,7 +247,6 @@ namespace YOSHI.DataRetrieverNS
         /// <returns>A filtered list of commit comments</returns>
         public static List<CommitComment> FilterComments(IReadOnlyList<CommitComment> comments, HashSet<string> memberUsernames)
         {
-            // TODO: Atm a copy of filter comments for pull request review comments. Try and make a generic method.
             List<CommitComment> filteredComments = new List<CommitComment>();
             foreach (CommitComment comment in comments)
             {
@@ -282,7 +351,5 @@ namespace YOSHI.DataRetrieverNS
         {
             return ValidAuthor(commit, memberUsernames) && CheckWithinTimeWindow(commit.Commit.Author.Date);
         }
-
-        // TODO: We will apply alias resolution here.
     }
 }

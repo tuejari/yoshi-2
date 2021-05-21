@@ -75,7 +75,6 @@ namespace YOSHI.CharacteristicProcessorNS
             DateTime dateLastCommit = DateTimeOffset.MinValue.Date;
             foreach (GitHubCommit commit in commits)
             {
-                // TODO: Reduce code duplication
                 if (Filters.ValidCommitter(commit, memberUsernames))
                 {
                     DateTime dateCurrentCommit = commit.Commit.Committer.Date.Date;

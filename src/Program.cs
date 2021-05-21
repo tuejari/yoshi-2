@@ -111,7 +111,7 @@ namespace YOSHI
                     Console.WriteLine("There are still {0} Bing Maps Requests left", GeoService.BingRequestsLeft);
                     Console.ResetColor();
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e.Message);
+                    Console.WriteLine("Exception: {0}. {1}", e.GetType(), e.Message);
                     Console.ResetColor();
                     failedCommunities.Add(community.RepoName, e.Message);
                     continue;
