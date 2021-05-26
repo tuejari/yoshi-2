@@ -24,35 +24,33 @@ namespace YOSHI
         /// writing to the output file.</exception>
         public static List<Community> TakeInput()
         {
-            bool validInFile = false;
-            bool validOutFile = false;
-
             try
             {
-                string inFile = "";
                 // Take and validate the input file
-                while (!validInFile)
+                string inFile;
+                do
                 {
                     Console.ForegroundColor = ConsoleColor.DarkGray;
                     Console.WriteLine("Please enter the absolute directory of the input file, including filename and " +
                         "its extension.");
                     Console.ResetColor();
                     inFile = Console.ReadLine();
-                    validInFile = File.Exists(inFile);
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-                    Console.WriteLine(validInFile ? "File exists." : "File does not exist, try again:");
-                    Console.ResetColor();
                 }
+                while (!File.Exists(inFile));
 
-                // Take the output directory
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine("Please enter the absolute directory of the output file.");
-                Console.ResetColor();
-                string outDir = Console.ReadLine();
-                Directory.CreateDirectory(outDir);
+                string outDir;
+                do
+                {
+                    // Take the output directory
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine("Please enter an existing absolute directory for the output file.");
+                    Console.ResetColor();
+                    outDir = @"" + Console.ReadLine();
+                }
+                while (!Directory.Exists(outDir));
 
                 // Take and validate the input specifying the output file 
-                while (!validOutFile)
+                do
                 {
                     Console.ForegroundColor = ConsoleColor.DarkGray;
                     Console.WriteLine("Please enter the filename of the output file. Do not include an extension, " +
@@ -61,16 +59,16 @@ namespace YOSHI
                     string outFilename = Console.ReadLine();
 
                     OutDirFile = outDir + '\\' + outFilename + ".csv";
-
-                    // Create the output file and write the headers
-                    using FileStream stream = File.Open(OutDirFile, FileMode.CreateNew);
-                    using StreamWriter writer = new StreamWriter(stream);
-                    using CsvWriter csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-                    csv.Context.RegisterClassMap<CommunityMap>();
-                    csv.WriteHeader<Community>();
-                    csv.NextRecord();
-                    validOutFile = true;
                 }
+                while (File.Exists(OutDirFile));
+
+                // Create the output file and write the headers
+                using FileStream stream = File.Open(OutDirFile, FileMode.CreateNew);
+                using StreamWriter writer = new StreamWriter(stream);
+                using CsvWriter csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+                csv.Context.RegisterClassMap<CommunityMap>();
+                csv.WriteHeader<Community>();
+                csv.NextRecord();
 
                 // https://docs.microsoft.com/en-us/bingmaps/getting-started/bing-maps-dev-center-help/understanding-bing-maps-transactions?redirectedfrom=MSDN
                 Console.ForegroundColor = ConsoleColor.DarkGray;

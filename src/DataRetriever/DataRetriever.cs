@@ -88,24 +88,10 @@ namespace YOSHI.DataRetrieverNS
                     return false;
                 }
 
-                Console.WriteLine("Extract commits within time window...");
-                commitsWithinTimeWindow = Filters.ExtractCommitsWithinTimeWindow(data.Commits);
-                Console.WriteLine("Retrieve commit details..."); // Necessary to retrieve what files were changed each commit
-                List<GitHubCommit> detailedCommitsWithinTimeWindow = new List<GitHubCommit>();
-                foreach (GitHubCommit commit in commitsWithinTimeWindow)
-                {
-                    GitHubCommit detailedCommit = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.Get, repoOwner, repoName, commit.Sha);
-                    detailedCommitsWithinTimeWindow.Add(detailedCommit);
-                }
-                Console.WriteLine("Filtering detailed commits...");
-                data.CommitsWithinTimeWindow = Filters.FilterDetailedCommits(detailedCommitsWithinTimeWindow, data.MemberUsernames);
-
                 // There must be at least one closed milestone
                 Console.WriteLine("Retrieving closed milestones...");
                 MilestoneRequest stateFilter = new MilestoneRequest { State = ItemStateFilter.Closed };
-                IReadOnlyList<Milestone> milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
-                Console.WriteLine("Filtering milestones...");
-                data.Milestones = Filters.FilterMilestones(milestones);
+                data.Milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
                 if (data.Milestones.Count < 1)
                 {
                     return false;
@@ -188,6 +174,18 @@ namespace YOSHI.DataRetrieverNS
             GitHubData data = community.Data;
             try
             {
+                Console.WriteLine("Extract commits within time window...");
+                List<GitHubCommit> commitsWithinTimeWindow = Filters.ExtractCommitsWithinTimeWindow(data.Commits);
+                Console.WriteLine("Retrieve commit details..."); // Necessary to retrieve what files were changed each commit
+                List<GitHubCommit> detailedCommitsWithinTimeWindow = new List<GitHubCommit>();
+                foreach (GitHubCommit commit in commitsWithinTimeWindow)
+                {
+                    GitHubCommit detailedCommit = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.Get, repoOwner, repoName, commit.Sha);
+                    detailedCommitsWithinTimeWindow.Add(detailedCommit);
+                }
+                Console.WriteLine("Filtering detailed commits...");
+                data.CommitsWithinTimeWindow = Filters.FilterDetailedCommits(detailedCommitsWithinTimeWindow, data.MemberUsernames);
+
                 // A member is considered active if they made a commit in the last 30 days
                 Console.WriteLine("Extracting active users...");
                 data.ActiveMembers = Filters.ExtractMembersFromCommits(data.CommitsWithinTimeWindow, data.MemberUsernames, 30);

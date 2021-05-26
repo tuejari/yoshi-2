@@ -6,19 +6,19 @@ namespace YOSHI.DataRetrieverNS
 {
     /// <summary>
     /// Class responsible for filtering the GitHub data. It checks that everything is within the given time window 
-    /// (default 90 days). It filters out all data about GitHub users that are not considered members.
+    /// (default 90 days + today). It filters out all data about GitHub users that are not considered members.
     /// </summary>
     public static class Filters
     {
-        public static readonly DateTime EndDateTimeWindow = new DateTimeOffset(DateTime.Today).Date;
+        public static readonly DateTime Today;
         public static readonly DateTime StartDateTimeWindow;
-
         static Filters()
         {
             int days = 90; // snapshot period of 3 months (approximated using 90 days)
             // Note: Currently other periods are not supported.
             // Engagementprocessor uses hardcoded month thresholds of 30 and 60
-            StartDateTimeWindow = EndDateTimeWindow.AddDays(-days).Date;
+            Today = DateTime.Today;
+            StartDateTimeWindow = Today.AddDays(-days).Date;
         }
 
         /// <summary>
@@ -77,9 +77,7 @@ namespace YOSHI.DataRetrieverNS
             List<GitHubCommit> filteredCommits = new List<GitHubCommit>();
             foreach (GitHubCommit commit in commits)
             {
-                // Note: filter out commits from today
-                if ((ValidCommitter(commit, memberUsernames) || ValidAuthor(commit, memberUsernames))
-                    && (commit.Commit.Committer.Date < EndDateTimeWindow || commit.Commit.Author.Date < EndDateTimeWindow))
+                if (ValidCommitter(commit, memberUsernames) || ValidAuthor(commit, memberUsernames))
                 {
                     filteredCommits.Add(commit);
                 }
@@ -143,27 +141,6 @@ namespace YOSHI.DataRetrieverNS
             }
             // TODO: Apply alias resolution
             return usernames;
-        }
-
-        /// <summary>
-        /// Filter milestones from today. We only take all  milestones that were closed prior to today.
-        /// </summary>
-        /// <param name="milestones">A list of milestones.</param>
-        /// <returns>A list of milestones that were last updated before today.</returns>
-        public static IReadOnlyList<Milestone> FilterMilestones(IReadOnlyList<Milestone> milestones)
-        {
-            List<Milestone> filteredMilestones = new List<Milestone>();
-
-            foreach (Milestone milestone in milestones)
-            {
-                // Remove closed milestones that were updated after the time window.
-                if (milestone.UpdatedAt < EndDateTimeWindow)
-                {
-                    filteredMilestones.Add(milestone);
-                }
-            }
-
-            return filteredMilestones;
         }
 
         /// <summary>
@@ -260,7 +237,7 @@ namespace YOSHI.DataRetrieverNS
 
         /// <summary>
         /// A method that takes a DateTimeOffset object and checks whether it is within the specified time window x number 
-        /// of days (Default: 3 months,  i.e., x = 90 days). This window ends at today's midnight time and starts at 
+        /// of days (Default: 3 months,  i.e., x = 90 days). This window ends at the time of data retrieval and starts at 
         /// midnight x days prior.
         /// </summary>
         /// <param name="dateTime">A DateTimeOffset object</param>
@@ -273,9 +250,9 @@ namespace YOSHI.DataRetrieverNS
             }
 
             // We set the date time offset window for the 3 months earlier from now (approximated using 90 days)
-            DateTime startDate = EndDateTimeWindow.AddDays(-days).Date;
+            DateTime startDate = Today.AddDays(-days).Date;
             DateTime date = dateTime.Date; // Extract the date from the datetime object
-            return date >= startDate && date < EndDateTimeWindow;
+            return date >= startDate;
         }
 
         /// <summary>
