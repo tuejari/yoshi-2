@@ -80,6 +80,10 @@ E.g., if you have 400 requests left:<br />
 
 After following these steps the application will process the GitHub repositories specified in the input file. After finishing processing a community, the data is written to the output file. This action fails if the output file is opened in another program, therefore, do not open the output file while the application is running. Note: the output file will not include communities that the application failed to process.
 
+### IMPORTANT: Disable Quick Edit Mode ###
+
+Note that it is possible to halt a console application in Windows due to the command line's Quick Edit mode. This is very difficult to notice. To get rid of this behavior, right click the top border of the command window and select ```Properties```. Then in ```Options > Edit Options``` make sure to disable ```Quick Edit Mode```. 
+
 ### Console Logging Colors ###
 
 The console will log its progress (not written to an output file). To make some messages easily recognizable we used the following color coding of the log messages:
