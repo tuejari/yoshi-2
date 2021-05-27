@@ -10,15 +10,15 @@ namespace YOSHI.DataRetrieverNS
     /// </summary>
     public static class Filters
     {
-        public static readonly DateTime Today;
-        public static readonly DateTime StartDateTimeWindow;
+        public static readonly DateTimeOffset Now;
+        public static readonly DateTimeOffset StartDateTimeWindow;
         static Filters()
         {
             int days = 90; // snapshot period of 3 months (approximated using 90 days)
             // Note: Currently other periods are not supported.
             // Engagementprocessor uses hardcoded month thresholds of 30 and 60
-            Today = DateTime.Today;
-            StartDateTimeWindow = Today.AddDays(-days).Date;
+            Now = DateTimeOffset.UtcNow;
+            StartDateTimeWindow = Now.AddDays(-days);
         }
 
         /// <summary>
@@ -183,7 +183,9 @@ namespace YOSHI.DataRetrieverNS
                 // requests where the created at is before the 3 month, update in the 3 months and last update today
                 // Not sure how to deal with this yet. (Problem not just related to pull requests, also comments and
                 // milestones). Need to check all UpdatedAt, CreatedAt, ClosedAt, MergedAt
-                if (CheckWithinTimeWindow(pullRequest.UpdatedAt) && pullRequest.User != null
+                if ((CheckWithinTimeWindow(pullRequest.UpdatedAt) || CheckWithinTimeWindow(pullRequest.CreatedAt)
+                    || CheckWithinTimeWindow(pullRequest.MergedAt) || CheckWithinTimeWindow(pullRequest.ClosedAt)) 
+                    && pullRequest.User != null
                     && pullRequest.User.Login != null && memberUsernames.Contains(pullRequest.User.Login))
                 {
                     filteredPullRequests.Add(pullRequest);
@@ -207,7 +209,10 @@ namespace YOSHI.DataRetrieverNS
             List<PullRequestReviewComment> filteredComments = new List<PullRequestReviewComment>();
             foreach (PullRequestReviewComment comment in comments)
             {
-                if (CheckWithinTimeWindow(comment.UpdatedAt) && comment.User != null && comment.User.Login != null && memberUsernames.Contains(comment.User.Login))
+                if ((CheckWithinTimeWindow(comment.UpdatedAt) || CheckWithinTimeWindow(comment.CreatedAt))
+                    && comment.User != null 
+                    && comment.User.Login != null 
+                    && memberUsernames.Contains(comment.User.Login))
                 {
                     filteredComments.Add(comment);
                 }
@@ -227,10 +232,19 @@ namespace YOSHI.DataRetrieverNS
             List<CommitComment> filteredComments = new List<CommitComment>();
             foreach (CommitComment comment in comments)
             {
-                if (CheckWithinTimeWindow(comment.CreatedAt) && comment.User != null && comment.User.Login != null && memberUsernames.Contains(comment.User.Login))
+                if ((CheckWithinTimeWindow(comment.UpdatedAt) || CheckWithinTimeWindow(comment.CreatedAt)) 
+                    && comment.User != null 
+                    && comment.User.Login != null 
+                    && memberUsernames.Contains(comment.User.Login))
                 {
                     filteredComments.Add(comment);
                 }
+                // DEBUG
+                if (!memberUsernames.Contains(comment.User.Login))
+                {
+                    Console.WriteLine(comment.User.Login);
+                }
+
             }
             return filteredComments;
         }
@@ -242,7 +256,7 @@ namespace YOSHI.DataRetrieverNS
         /// </summary>
         /// <param name="dateTime">A DateTimeOffset object</param>
         /// <returns>Whether the DateTimeOffset object falls within the time window.</returns>
-        public static bool CheckWithinTimeWindow(DateTimeOffset dateTime, int days = 90)
+        public static bool CheckWithinTimeWindow(DateTimeOffset? dateTime, int days = 90)
         {
             if (dateTime == null)
             {
@@ -250,9 +264,8 @@ namespace YOSHI.DataRetrieverNS
             }
 
             // We set the date time offset window for the 3 months earlier from now (approximated using 90 days)
-            DateTime startDate = Today.AddDays(-days).Date;
-            DateTime date = dateTime.Date; // Extract the date from the datetime object
-            return date >= startDate;
+            DateTimeOffset startDate = Now.AddDays(-days);
+            return dateTime >= startDate;
         }
 
         /// <summary>

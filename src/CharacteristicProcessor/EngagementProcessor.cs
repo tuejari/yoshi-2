@@ -78,11 +78,16 @@ namespace YOSHI.CharacteristicProcessorNS
 
             foreach (CommitComment comment in commitComments)
             {
-                commentDatesPerMember[comment.User.Login].Add(comment.CreatedAt);
+                // Use a comment's latest date, which is either UpdatedAt or CreatedAt
+                DateTimeOffset date = 
+                    comment.UpdatedAt != null && comment.UpdatedAt > comment.CreatedAt ? (DateTimeOffset)comment.UpdatedAt : comment.CreatedAt;
+                commentDatesPerMember[comment.User.Login].Add(date);
             }
             foreach (PullRequestReviewComment comment in pullReqComments)
             {
-                commentDatesPerMember[comment.User.Login].Add(comment.CreatedAt);
+                DateTimeOffset date = 
+                    comment.UpdatedAt != null && comment.UpdatedAt > comment.CreatedAt ? comment.UpdatedAt : comment.CreatedAt;
+                commentDatesPerMember[comment.User.Login].Add(date);
             }
 
             List<double> meanCommentsPerMonthPerMember = new List<double>();

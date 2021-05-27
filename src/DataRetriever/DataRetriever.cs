@@ -313,6 +313,7 @@ namespace YOSHI.DataRetrieverNS
                 HashSet<string> followingNames = Filters.ExtractUsernamesFromUsers(following, memberUsernames);
 
                 // TODO: Check whether these repositories are all repositories that the user has at least one commit to the main branch / gh-pages
+                // Currently: Assume that they have all contributed to their owned repositories
                 IReadOnlyList<Repository> repositories =
                     await GitHubRateLimitHandler.Delegate(Client.Repository.GetAllForUser, username, MaxSizeBatches);
                 HashSet<string> repos = Filters.ExtractRepoNamesFromRepos(repositories, repoName);

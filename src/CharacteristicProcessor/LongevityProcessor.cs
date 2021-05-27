@@ -29,7 +29,7 @@ namespace YOSHI.CharacteristicProcessorNS
         private static float MeanCommitterLongevity(IReadOnlyList<GitHubCommit> commits, HashSet<string> memberUsernames)
         {
             // We group the list of commits' datetimes per committer
-            Dictionary<string, List<DateTime>> mapUserCommitDate = new Dictionary<string, List<DateTime>>();
+            Dictionary<string, List<DateTimeOffset>> mapUserCommitDate = new Dictionary<string, List<DateTimeOffset>>();
             foreach (GitHubCommit commit in commits)
             {
                 if (Filters.ValidCommitter(commit, memberUsernames))
@@ -37,9 +37,9 @@ namespace YOSHI.CharacteristicProcessorNS
                     string committer = commit.Committer.Login;
                     if (!mapUserCommitDate.ContainsKey(committer))
                     {
-                        mapUserCommitDate.Add(committer, new List<DateTime>());
+                        mapUserCommitDate.Add(committer, new List<DateTimeOffset>());
                     }
-                    mapUserCommitDate[committer].Add(commit.Commit.Committer.Date.Date);
+                    mapUserCommitDate[committer].Add(commit.Commit.Committer.Date);
                 }
 
                 if (Filters.ValidAuthor(commit, memberUsernames))
@@ -47,22 +47,22 @@ namespace YOSHI.CharacteristicProcessorNS
                     string author = commit.Author.Login;
                     if (!mapUserCommitDate.ContainsKey(author))
                     {
-                        mapUserCommitDate.Add(author, new List<DateTime>());
+                        mapUserCommitDate.Add(author, new List<DateTimeOffset>());
                     }
-                    mapUserCommitDate[author].Add(commit.Commit.Author.Date.Date);
+                    mapUserCommitDate[author].Add(commit.Commit.Author.Date);
                 }
             }
 
             int totalCommitterLongevityInDays = 0;
             // For each committer, we compute the dates of their first- and last commit.
-            foreach (KeyValuePair<string, List<DateTime>> userCommitDate in mapUserCommitDate)
+            foreach (KeyValuePair<string, List<DateTimeOffset>> userCommitDate in mapUserCommitDate)
             {
                 // We use committer date instead of author date, since that's when the commit was last applied.
                 // Source: https://stackoverflow.com/questions/18750808/difference-between-author-and-committer-in-git
                 // NOTE: this limits the metric, as we do not compute the longevity for each member.
-                DateTime dateFirstCommit = DateTimeOffset.MaxValue.Date;
-                DateTime dateLastCommit = DateTimeOffset.MinValue.Date;
-                foreach (DateTime dateCurrentCommit in userCommitDate.Value)
+                DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
+                DateTimeOffset dateLastCommit = DateTimeOffset.MinValue;
+                foreach (DateTimeOffset dateCurrentCommit in userCommitDate.Value)
                 {
                     // If current earliest commit is later than current commit
                     if (dateFirstCommit.CompareTo(dateCurrentCommit) > 0)

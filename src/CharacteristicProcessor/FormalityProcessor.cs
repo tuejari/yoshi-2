@@ -71,13 +71,13 @@ namespace YOSHI.CharacteristicProcessorNS
         {
             // We use committer date instead of author date, since that's when the commit was last applied.
             // Source: https://stackoverflow.com/questions/18750808/difference-between-author-and-committer-in-git
-            DateTime dateFirstCommit = DateTimeOffset.MaxValue.Date;
-            DateTime dateLastCommit = DateTimeOffset.MinValue.Date;
+            DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
+            DateTimeOffset dateLastCommit = DateTimeOffset.MinValue;
             foreach (GitHubCommit commit in commits)
             {
                 if (Filters.ValidCommitter(commit, memberUsernames))
                 {
-                    DateTime dateCurrentCommit = commit.Commit.Committer.Date.Date;
+                    DateTimeOffset dateCurrentCommit = commit.Commit.Committer.Date;
                     // If current earliest commit is later than current commit
                     if (dateFirstCommit.CompareTo(dateCurrentCommit) > 0)
                     {
@@ -92,7 +92,7 @@ namespace YOSHI.CharacteristicProcessorNS
 
                 if (Filters.ValidAuthor(commit, memberUsernames))
                 {
-                    DateTime dateCurrentCommit = commit.Commit.Author.Date.Date;
+                    DateTimeOffset dateCurrentCommit = commit.Commit.Author.Date;
                     // If current earliest commit is later than current commit
                     if (dateFirstCommit.CompareTo(dateCurrentCommit) > 0)
                     {
