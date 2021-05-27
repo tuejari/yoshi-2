@@ -79,13 +79,13 @@ namespace YOSHI.CharacteristicProcessorNS
             foreach (CommitComment comment in commitComments)
             {
                 // Use a comment's latest date, which is either UpdatedAt or CreatedAt
-                DateTimeOffset date = 
+                DateTimeOffset date =
                     comment.UpdatedAt != null && comment.UpdatedAt > comment.CreatedAt ? (DateTimeOffset)comment.UpdatedAt : comment.CreatedAt;
                 commentDatesPerMember[comment.User.Login].Add(date);
             }
             foreach (PullRequestReviewComment comment in pullReqComments)
             {
-                DateTimeOffset date = 
+                DateTimeOffset date =
                     comment.UpdatedAt != null && comment.UpdatedAt > comment.CreatedAt ? comment.UpdatedAt : comment.CreatedAt;
                 commentDatesPerMember[comment.User.Login].Add(date);
             }

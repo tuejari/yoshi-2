@@ -354,9 +354,6 @@ namespace YOSHI.DataRetrieverNS
             PullRequestReviewCommentRequest since = new PullRequestReviewCommentRequest { Since = Filters.StartDateTimeWindow };
             IReadOnlyList<PullRequestReviewComment> comments = await GitHubRateLimitHandler.Delegate(Client.PullRequest.ReviewComment.GetAllForRepository, repoOwner, repoName, since, MaxSizeBatches);
 
-            // 144 API requests, 3310 comments DEBUG
-            await GitHubRequestsRemaining(); // DEBUG
-
             Console.WriteLine("Filtering pull request comments...");
             List<PullRequestReviewComment> filteredComments = Filters.FilterComments(comments, memberUsernames);
 

@@ -177,16 +177,11 @@ namespace YOSHI.DataRetrieverNS
             List<PullRequest> filteredPullRequests = new List<PullRequest>();
             foreach (PullRequest pullRequest in pullRequests)
             {
-                // TODO: BUG: If the last update was today, it will be excluded, even if other parts were within the
-                // 3-month time window
-                // If we also check for createdAt within the 3-month window, we would still be able to exclude pull
-                // requests where the created at is before the 3 month, update in the 3 months and last update today
-                // Not sure how to deal with this yet. (Problem not just related to pull requests, also comments and
-                // milestones). Need to check all UpdatedAt, CreatedAt, ClosedAt, MergedAt
                 if ((CheckWithinTimeWindow(pullRequest.UpdatedAt) || CheckWithinTimeWindow(pullRequest.CreatedAt)
-                    || CheckWithinTimeWindow(pullRequest.MergedAt) || CheckWithinTimeWindow(pullRequest.ClosedAt)) 
+                    || CheckWithinTimeWindow(pullRequest.MergedAt) || CheckWithinTimeWindow(pullRequest.ClosedAt))
                     && pullRequest.User != null
-                    && pullRequest.User.Login != null && memberUsernames.Contains(pullRequest.User.Login))
+                    && pullRequest.User.Login != null
+                    && memberUsernames.Contains(pullRequest.User.Login))
                 {
                     filteredPullRequests.Add(pullRequest);
                 }
@@ -210,8 +205,8 @@ namespace YOSHI.DataRetrieverNS
             foreach (PullRequestReviewComment comment in comments)
             {
                 if ((CheckWithinTimeWindow(comment.UpdatedAt) || CheckWithinTimeWindow(comment.CreatedAt))
-                    && comment.User != null 
-                    && comment.User.Login != null 
+                    && comment.User != null
+                    && comment.User.Login != null
                     && memberUsernames.Contains(comment.User.Login))
                 {
                     filteredComments.Add(comment);
@@ -232,19 +227,13 @@ namespace YOSHI.DataRetrieverNS
             List<CommitComment> filteredComments = new List<CommitComment>();
             foreach (CommitComment comment in comments)
             {
-                if ((CheckWithinTimeWindow(comment.UpdatedAt) || CheckWithinTimeWindow(comment.CreatedAt)) 
-                    && comment.User != null 
-                    && comment.User.Login != null 
+                if ((CheckWithinTimeWindow(comment.UpdatedAt) || CheckWithinTimeWindow(comment.CreatedAt))
+                    && comment.User != null
+                    && comment.User.Login != null
                     && memberUsernames.Contains(comment.User.Login))
                 {
                     filteredComments.Add(comment);
                 }
-                // DEBUG
-                if (!memberUsernames.Contains(comment.User.Login))
-                {
-                    Console.WriteLine(comment.User.Login);
-                }
-
             }
             return filteredComments;
         }
