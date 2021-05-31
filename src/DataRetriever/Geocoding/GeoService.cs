@@ -1,8 +1,8 @@
-﻿using Geocoding.Microsoft;
+﻿using Geocoding;
+using Geocoding.Microsoft;
 using Octokit;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,10 +21,12 @@ namespace YOSHI.DataRetrieverNS.Geocoding
         /// <param name="members">A list of members to retrieve the addresses from</param>
         /// <param name="repoName">The repository name, used in exception handling</param>
         /// <returns>A list of addresses for the passed list of members</returns>
-        /// <exception cref="YOSHI.Geocoding.GeocoderRateLimitException">Thrown when the Bing Rate Limit is exceeded.</exception>
-        public static async Task<List<BingAddress>> RetrieveMemberAddresses(List<User> members, string repoName)
+        /// <exception cref="GeocoderRateLimitException">Thrown when the Bing Rate Limit is exceeded.</exception>
+        /// <exception cref="BingGeocodingException">Thrown when Bing Geocoding could not successfully retrieve a location.</exception>
+        public static async Task<(List<Location>, List<string>)> RetrieveMemberAddresses(List<User> members, string repoName)
         {
-            List<BingAddress> addresses = new List<BingAddress>();
+            List<Location> coordinates = new List<Location>();
+            List<string> countries = new List<string>();
 
             // NOTE: We loop over all user objects instead of usernames to access location data
             foreach (User member in members)
@@ -35,7 +37,13 @@ namespace YOSHI.DataRetrieverNS.Geocoding
                     if (member.Location != null)
                     {
                         BingAddress address = await GetBingAddress(member.Location);
-                        addresses.Add(address);
+                        coordinates.Add(address.Coordinates);
+                        // Note: The ContainsKey method of the Hofstede dictionary has been adjusted to be case insensitive and 
+                        // diacritic insensitive
+                        if (HI.Hofstede.ContainsKey(address.CountryRegion))
+                        {
+                            countries.Add(address.CountryRegion);
+                        }
                     }
                     // Note: We do not filter out all users that we do not have complete information from,
                     // it could filter out information too aggressively.
@@ -54,7 +62,7 @@ namespace YOSHI.DataRetrieverNS.Geocoding
                     throw;
                 }
             }
-            return addresses;
+            return (coordinates, countries);
         }
 
         /// <summary>
@@ -90,31 +98,6 @@ namespace YOSHI.DataRetrieverNS.Geocoding
             {
                 throw new GeocoderRateLimitException("Too few Bing Requests left.");
             }
-        }
-
-        /// <summary>
-        /// Method that was used to test Hofstede countries against Bing Maps reported countries. We inputted the keys 
-        /// from CharacteristicProcessor.HI.Hofstede as addresses. 
-        /// </summary>
-        /// <param name="addresses">The keys from CharacteristicProcessor.HI.Hofstede</param>
-        /// <returns></returns>
-        public static async Task<List<BingAddress>> TestCountryRegions(List<string> addresses)
-        {
-            List<BingAddress> list = new List<BingAddress>();
-            Console.WriteLine("Address, Bing CountryRegion");
-            foreach (string address in addresses)
-            {
-                BingAddress result = await GetBingAddress(address);
-                list.Add(result);
-                // Compare strings, ignoring lower/uppercase, ignore accents
-                //  CultureInfo.CurrentCulture, CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) != 0
-                if (string.Compare(address, result.CountryRegion, CultureInfo.CurrentCulture, CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) != 0)
-                {
-                    // If not equal, print them
-                    Console.WriteLine("{0}, {1}", address.ToLower(), result.CountryRegion.ToLower());
-                }
-            }
-            return list;
         }
     }
 }

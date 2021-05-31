@@ -140,48 +140,54 @@ namespace YOSHI
         {
             public CommunityMap()
             {
-                this.Map(m => m.RepoName).Index(0);
-                this.Map(m => m.RepoOwner).Index(1);
+                this.Map(m => m.RepoName).Index(00);
+                this.Map(m => m.RepoOwner).Index(10);
 
-                this.Map(m => m.Metrics.Structure.CommonProjects).Index(2);
-                this.Map(m => m.Metrics.Structure.Followers).Index(3);
-                this.Map(m => m.Metrics.Structure.PullReqInteraction).Index(4);
+                // Report number of members and the number of locations known, as well as the number of hofstede locations known.
+                // Then we can decide afterward whether we exclude certain communities, if we have too little information.
+                this.Map(m => m.Data.Members.Count).Name("NrMembers").Index(12);
+                this.Map(m => m.Data.Coordinates.Count).Name("NrLocations").Index(15);
+                this.Map(m => m.Data.Countries.Count).Name("NrHiCountries").Index(17);
 
-                this.Map(m => m.Metrics.Dispersion.VarianceGeographicalDistance).Index(5);
-                this.Map(m => m.Metrics.Dispersion.VarianceHofstedeCulturalDistance).Index(6);
+                this.Map(m => m.Metrics.Structure.CommonProjects).Index(20);
+                this.Map(m => m.Metrics.Structure.Followers).Index(30);
+                this.Map(m => m.Metrics.Structure.PullReqInteraction).Index(40);
 
-                this.Map(m => m.Metrics.Formality.MeanMembershipType).Index(7);
-                this.Map(m => m.Metrics.Formality.Milestones).Index(8);
-                this.Map(m => m.Metrics.Formality.Lifetime).Index(9);
+                this.Map(m => m.Metrics.Dispersion.VarianceGeographicalDistance).Index(50);
+                this.Map(m => m.Metrics.Dispersion.VarianceHofstedeCulturalDistance).Index(60);
 
-                this.Map(m => m.Metrics.Engagement.MedianNrCommentsPerPullReq).Index(10);
-                this.Map(m => m.Metrics.Engagement.MedianMonthlyPullCommitCommentsDistribution).Index(11);
-                this.Map(m => m.Metrics.Engagement.MedianActiveMember).Index(12);
-                this.Map(m => m.Metrics.Engagement.MedianWatcher).Index(13);
-                this.Map(m => m.Metrics.Engagement.MedianStargazer).Index(14);
-                this.Map(m => m.Metrics.Engagement.MedianCommitDistribution).Index(15);
-                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution).Index(16);
+                this.Map(m => m.Metrics.Formality.MeanMembershipType).Index(70);
+                this.Map(m => m.Metrics.Formality.Milestones).Index(80);
+                this.Map(m => m.Metrics.Formality.Lifetime).Index(90);
 
-                this.Map(m => m.Metrics.Longevity.MeanCommitterLongevity).Index(17);
+                this.Map(m => m.Metrics.Engagement.MedianNrCommentsPerPullReq).Index(100);
+                this.Map(m => m.Metrics.Engagement.MedianMonthlyPullCommitCommentsDistribution).Index(110);
+                this.Map(m => m.Metrics.Engagement.MedianActiveMember).Index(120);
+                this.Map(m => m.Metrics.Engagement.MedianWatcher).Index(130);
+                this.Map(m => m.Metrics.Engagement.MedianStargazer).Index(140);
+                this.Map(m => m.Metrics.Engagement.MedianCommitDistribution).Index(150);
+                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution).Index(160);
 
-                //this.Map(m => m.Metrics.Cohesion.Followers).Index(18);
+                this.Map(m => m.Metrics.Longevity.MeanCommitterLongevity).Index(170);
 
-                this.Map(m => m.Characteristics.Structure).Index(19);
-                this.Map(m => m.Characteristics.Dispersion).Index(20);
-                this.Map(m => m.Characteristics.Formality).Index(21);
-                this.Map(m => m.Characteristics.Engagement).Index(22);
-                this.Map(m => m.Characteristics.Longevity).Index(23);
-                //this.Map(m => m.Characteristics.Cohesion).Index(24);
+                //this.Map(m => m.Metrics.Cohesion.Followers).Index(180);
 
-                this.Map(m => m.Pattern.SN).Index(25);
-                this.Map(m => m.Pattern.FG).Index(26);
-                this.Map(m => m.Pattern.PT).Index(27);
-                //this.Map(m => m.Pattern.WorkGroup).Index(28);
-                this.Map(m => m.Pattern.NoP).Index(29);
-                this.Map(m => m.Pattern.IC).Index(30);
-                this.Map(m => m.Pattern.FN).Index(31);
-                this.Map(m => m.Pattern.IN).Index(32);
-                this.Map(m => m.Pattern.CoP).Index(33);
+                this.Map(m => m.Characteristics.Structure).Index(190);
+                this.Map(m => m.Characteristics.Dispersion).Index(200);
+                this.Map(m => m.Characteristics.Formality).Index(210);
+                this.Map(m => m.Characteristics.Engagement).Index(220);
+                this.Map(m => m.Characteristics.Longevity).Index(230);
+                //this.Map(m => m.Characteristics.Cohesion).Index(240);
+
+                this.Map(m => m.Pattern.SN).Index(250);
+                this.Map(m => m.Pattern.FG).Index(260);
+                this.Map(m => m.Pattern.PT).Index(270);
+                //this.Map(m => m.Pattern.WorkGroup).Index(280);
+                this.Map(m => m.Pattern.NoP).Index(290);
+                this.Map(m => m.Pattern.IC).Index(300);
+                this.Map(m => m.Pattern.FN).Index(310);
+                this.Map(m => m.Pattern.IN).Index(320);
+                this.Map(m => m.Pattern.CoP).Index(330);
             }
         }
     }

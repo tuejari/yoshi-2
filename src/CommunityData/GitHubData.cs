@@ -1,4 +1,4 @@
-﻿using Geocoding.Microsoft;
+﻿using Geocoding;
 using Octokit;
 using System.Collections.Generic;
 
@@ -32,6 +32,7 @@ namespace YOSHI.CommunityData
         public HashSet<string> Watchers { get; set; }
         public HashSet<string> Stargazers { get; set; }
 
-        public List<BingAddress> Addresses { get; set; }
+        public List<Location> Coordinates { get; set; }
+        public List<string> Countries { get; set; }
     }
 }

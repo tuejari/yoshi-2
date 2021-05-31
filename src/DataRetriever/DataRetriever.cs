@@ -99,11 +99,12 @@ namespace YOSHI.DataRetrieverNS
 
                 // There must be enough location data available to compute dispersion. TODO: Determine the threshold (maybe as percentage)
                 Console.WriteLine("Retrieving addresses...");
-                data.Addresses = await GeoService.RetrieveMemberAddresses(data.Members, repoName);
+                // Retrieve coordinates necessary for geographical distance and countries necessary for Hofstede indices
+                (data.Coordinates, data.Countries) = await GeoService.RetrieveMemberAddresses(data.Members, repoName);
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("Bing Maps API requests remaining: {0}", GeoService.BingRequestsLeft);
                 Console.ResetColor();
-                if (data.Addresses.Count < 2)
+                if (data.Coordinates.Count < 2 && data.Countries.Count < 2)
                 {
                     return false;
                 }
