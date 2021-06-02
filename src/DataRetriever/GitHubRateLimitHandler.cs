@@ -18,7 +18,7 @@ namespace YOSHI.DataRetrieverNS
         /// <param name="repoOwner">The name of the repository owner, whose repository we want data from.</param>
         /// <param name="repoName">The name of the repository we want to get data from.</param>
         /// <returns>No object or value is returned by this method when it completes.</returns>
-        /// <exception cref="System.Exception">Throws an exception if after 3 times of trying to retrieve data, 
+        /// <exception cref="Exception">Throws an exception if after 3 times of trying to retrieve data, 
         /// the data RateLimitExceededException still occurs, or if another exception is thrown.</exception>
         public async static Task<T> Delegate<T>(
             Func<string, string, Task<T>> func,
@@ -143,10 +143,10 @@ namespace YOSHI.DataRetrieverNS
         /// https://docs.github.com/en/rest/reference/pulls#list-review-comments-in-a-repository
         /// </param>
         public async static Task<T> Delegate<T>(
-            Func<string, string, PullRequestReviewCommentRequest, ApiOptions, Task<T>> func,
+            Func<string, string, IssueCommentRequest, ApiOptions, Task<T>> func,
             string repoOwner,
             string repoName,
-            PullRequestReviewCommentRequest since,
+            IssueCommentRequest since,
             ApiOptions maxBatchSize)
         {
             for (int i = 0; i < 3; i++)
@@ -196,7 +196,7 @@ namespace YOSHI.DataRetrieverNS
         /// <param name="func">The function that we want to call.</param>
         /// <param name="username">The username, whose data we want to retrieve.</param>
         /// <returns>No object or value is returned by this method when it completes.</returns>
-        /// <exception cref="System.Exception">Throws an exception if after 3 times of trying to retrieve data, 
+        /// <exception cref="Exception">Throws an exception if after 3 times of trying to retrieve data, 
         /// the data RateLimitExceededException still occurs, or if another exception is thrown.</exception>
         public async static Task<T> Delegate<T>(
             Func<string, Task<T>> func,

@@ -20,7 +20,7 @@ namespace YOSHI
         /// This method is used to guide the user in inputting the input directory, input filename, outfput directory 
         /// and the output filename.
         /// </summary>
-        /// <exception cref="System.IO.IOException">Thrown when something goes wrong while reading the input or when 
+        /// <exception cref="IOException">Thrown when something goes wrong while reading the input or when 
         /// writing to the output file.</exception>
         public static List<Community> TakeInput()
         {
@@ -91,7 +91,7 @@ namespace YOSHI
         /// specified input directory (InDir).
         /// </summary>
         /// <returns>A list of communities storing just the repo owner and repo name.</returns>
-        /// <exception cref="System.IO.IOException">Thrown when something goes wrong while reading the input file.</exception>
+        /// <exception cref="IOException">Thrown when something goes wrong while reading the input file.</exception>
         private static List<Community> ReadFile(string inFile)
         {
             List<Community> communities = new List<Community>();
@@ -140,6 +140,7 @@ namespace YOSHI
         {
             public CommunityMap()
             {
+                // TODO: Add logging for start and end of time window
                 this.Map(m => m.RepoName).Index(00);
                 this.Map(m => m.RepoOwner).Index(10);
 

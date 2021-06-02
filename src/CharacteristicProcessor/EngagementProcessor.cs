@@ -44,7 +44,7 @@ namespace YOSHI.CharacteristicProcessorNS
         /// </summary>
         /// <param name="mapPullReqsToComments">A mapping from pull requests to their corresponding comments.</param>
         /// <returns>The median value of pull request review comments per member.</returns>
-        private static double MedianNrCommentsPerPullReq(Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments)
+        private static double MedianNrCommentsPerPullReq(Dictionary<PullRequest, List<IssueComment>> mapPullReqsToComments)
         {
             // Compute the comments per pull request
             // Note: the pull requests and comments not from members and not within the snapshot period have been
@@ -66,7 +66,7 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <param name="pullReqComments">A list of pull request comments</param>
         /// <param name="memberUsernames">A list of member usernames</param>
         /// <returns>The median of all members' average (commit/pull-request) comments per month in the last 3 months.</returns>
-        private static double MedianMonthlyCommentsDistribution(IReadOnlyList<CommitComment> commitComments, List<PullRequestReviewComment> pullReqComments, HashSet<string> memberUsernames)
+        private static double MedianMonthlyCommentsDistribution(IReadOnlyList<CommitComment> commitComments, List<IssueComment> pullReqComments, HashSet<string> memberUsernames)
         {
             // Store the dates of the comments per member, so we can count the number of comments per month for each member
             Dictionary<string, List<DateTimeOffset>> commentDatesPerMember = new Dictionary<string, List<DateTimeOffset>>();
@@ -83,10 +83,10 @@ namespace YOSHI.CharacteristicProcessorNS
                     comment.UpdatedAt != null && comment.UpdatedAt > comment.CreatedAt ? (DateTimeOffset)comment.UpdatedAt : comment.CreatedAt;
                 commentDatesPerMember[comment.User.Login].Add(date);
             }
-            foreach (PullRequestReviewComment comment in pullReqComments)
+            foreach (IssueComment comment in pullReqComments)
             {
                 DateTimeOffset date =
-                    comment.UpdatedAt != null && comment.UpdatedAt > comment.CreatedAt ? comment.UpdatedAt : comment.CreatedAt;
+                    comment.UpdatedAt != null && comment.UpdatedAt > comment.CreatedAt ? (DateTimeOffset)comment.UpdatedAt : comment.CreatedAt;
                 commentDatesPerMember[comment.User.Login].Add(date);
             }
 

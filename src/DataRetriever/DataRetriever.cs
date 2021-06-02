@@ -1,7 +1,6 @@
 ﻿using Octokit;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using YOSHI.CommunityData;
 using YOSHI.DataRetrieverNS.Geocoding;
@@ -47,7 +46,7 @@ namespace YOSHI.DataRetrieverNS
         /// </summary>
         /// <param name="community">The community for which we need to retrieve GitHub Data.</param>
         /// <returns>A boolean whether the community is valid or not.</returns>
-        /// <exception cref="System.Exception">Thrown when something goes wrong while retrieving GitHub data.</exception>
+        /// <exception cref="Exception">Thrown when something goes wrong while retrieving GitHub data.</exception>
         public static async Task<bool> RetrieveDataAndCheckValidity(Community community)
         {
             string repoName = community.RepoName;
@@ -127,7 +126,7 @@ namespace YOSHI.DataRetrieverNS
         /// </summary>
         /// <param name="community">The community for which we need to retrieve GitHub Data.</param>
         /// <returns>No object or value is returned by this method when it completes.</returns>
-        /// <exception cref="System.Exception">Thrown when something goes wrong while retrieving GitHub data.</exception>
+        /// <exception cref="Exception">Thrown when something goes wrong while retrieving GitHub data.</exception>
         public static async Task RetrieveStructureData(Community community)
         {
             await GitHubRequestsRemaining();
@@ -145,7 +144,7 @@ namespace YOSHI.DataRetrieverNS
                 List<PullRequest> pullRequests = await RetrievePullRequests(repoOwner, repoName, data.MemberUsernames);
 
                 Console.WriteLine("Retrieving pull request comments...");
-                List<PullRequestReviewComment> pullRequestComments = await RetrievePullRequestComments(repoOwner, repoName, data.MemberUsernames);
+                List<IssueComment> pullRequestComments = await RetrievePullRequestComments(repoOwner, repoName, data.MemberUsernames);
 
                 Console.WriteLine("Map pull requests to comments...");
                 data.MapPullReqsToComments = MapPullRequestsToComments(pullRequests, pullRequestComments);
@@ -165,7 +164,7 @@ namespace YOSHI.DataRetrieverNS
         /// </summary>
         /// <param name="community">The community for which we need to retrieve GitHub Data.</param>
         /// <returns>No object or value is returned by this method when it completes.</returns>
-        /// <exception cref="System.Exception">Thrown when something goes wrong while retrieving GitHub data.</exception>
+        /// <exception cref="Exception">Thrown when something goes wrong while retrieving GitHub data.</exception>
         public static async Task RetrieveMiscellaneousData(Community community)
         {
             await GitHubRequestsRemaining();
@@ -349,14 +348,24 @@ namespace YOSHI.DataRetrieverNS
             return pullRequestsWithinWindow;
         }
 
-        private static async Task<List<PullRequestReviewComment>> RetrievePullRequestComments(string repoOwner, string repoName, HashSet<string> memberUsernames)
+        private static async Task<List<IssueComment>> RetrievePullRequestComments(string repoOwner, string repoName, HashSet<string> memberUsernames)
         {
             // Retrieve all pull request comments since the start of the time window and filter the comments
-            PullRequestReviewCommentRequest since = new PullRequestReviewCommentRequest { Since = Filters.StartDateTimeWindow };
-            IReadOnlyList<PullRequestReviewComment> comments = await GitHubRateLimitHandler.Delegate(Client.PullRequest.ReviewComment.GetAllForRepository, repoOwner, repoName, since, MaxSizeBatches);
+            // TODO: does the since parameter from GitHub use createdAt or UpdatedAt? The documentation from GitHub API
+            // makes it seem like it is only updatedAt.
+            // NOTE: There are two types of pull request comments, namely comments and review comments.
+            // Only review comments are available through the pull request API. The other type of comments are available
+            // through the Issues API, as GitHub's REST API v3 considers every pull request as an issue, but not every issue
+            // is a pull request. For this reason, "Issues" endpoints may return both issues and pull requests in the
+            // response. The number of pull request review comments increases as the number of mistakes in the pull
+            // request rises, as pull request review comments are comments on a portion of the unified diff made during
+            // a pull request review. 
+            IssueCommentRequest issueCommentRequest = new IssueCommentRequest { Since = Filters.StartDateTimeWindow };
+            IReadOnlyList<IssueComment> comments =
+                await GitHubRateLimitHandler.Delegate(Client.Issue.Comment.GetAllForRepository, repoOwner, repoName, issueCommentRequest, MaxSizeBatches);
 
             Console.WriteLine("Filtering pull request comments...");
-            List<PullRequestReviewComment> filteredComments = Filters.FilterComments(comments, memberUsernames);
+            List<IssueComment> filteredComments = Filters.FilterComments(comments, memberUsernames);
 
             return filteredComments;
         }
@@ -369,26 +378,27 @@ namespace YOSHI.DataRetrieverNS
         /// <param name="repoOwner">Repository owner</param>
         /// <param name="repoName">Repository name</param>
         /// <returns>A dictionary mapping pull requests to pull request review comments.</returns>
-        private static Dictionary<PullRequest, List<PullRequestReviewComment>> MapPullRequestsToComments(
-            List<PullRequest> pullRequests, List<PullRequestReviewComment> comments)
+        private static Dictionary<PullRequest, List<IssueComment>> MapPullRequestsToComments(
+            List<PullRequest> pullRequests, List<IssueComment> comments)
         {
-            Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments =
-                new Dictionary<PullRequest, List<PullRequestReviewComment>>();
+            Dictionary<PullRequest, List<IssueComment>> mapPullReqsToComments =
+                new Dictionary<PullRequest, List<IssueComment>>();
             // Temporarily store the pull requests by number, to easily link them to the comments
             Dictionary<int, PullRequest> pullRequestByNumber = new Dictionary<int, PullRequest>();
 
             foreach (PullRequest pullRequest in pullRequests)
             {
-                mapPullReqsToComments.Add(pullRequest, new List<PullRequestReviewComment>());
+                mapPullReqsToComments.Add(pullRequest, new List<IssueComment>());
                 pullRequestByNumber.Add(pullRequest.Number, pullRequest);
             }
 
             // Map the remaining comments to the pull requests
-            foreach (PullRequestReviewComment comment in comments)
+            foreach (IssueComment comment in comments)
             {
                 try
                 {
-                    int pullRequestNumber = int.Parse(comment.PullRequestUrl.Split('/').Last());
+                    string[] splitUrl = comment.HtmlUrl.Split(new char[] { '/', '#' });
+                    int pullRequestNumber = int.Parse(splitUrl[6]);
                     PullRequest pullRequest = pullRequestByNumber[pullRequestNumber]; // TODO: non-matching key 9973, 10977
                     mapPullReqsToComments[pullRequest].Add(comment);
                 }

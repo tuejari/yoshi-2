@@ -41,6 +41,8 @@ namespace YOSHI.CharacteristicProcessorNS
             bool commonProjectsConnection = false;
 
             // Find common projects by comparing the names of repositories they worked on
+            // TODO: At the moment we go over each pair twice. Could not find an easy efficient fix to loop over the 
+            // unique pairs in the dictionary.
             foreach (KeyValuePair<string, HashSet<string>> firstUser in mapUserRepositories)
             {
                 foreach (KeyValuePair<string, HashSet<string>> secondUser in mapUserRepositories)
@@ -99,19 +101,19 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <returns>A mapping for each user to all other users that they're connected to through pull requests.</returns>
         private static bool AddPullReqConnections(
             ref Graph<string> structureGraph,
-            Dictionary<PullRequest, List<PullRequestReviewComment>> mapPullReqsToComments,
+            Dictionary<PullRequest, List<IssueComment>> mapPullReqsToComments,
             HashSet<string> memberUsernames)
         {
             bool pullReqConnection = false;
             // Add the connections for each pull request commenter and author
-            foreach (KeyValuePair<PullRequest, List<PullRequestReviewComment>> mapPullReqToComments in mapPullReqsToComments)
+            foreach (KeyValuePair<PullRequest, List<IssueComment>> mapPullReqToComments in mapPullReqsToComments)
             {
                 string pullReqAuthor = mapPullReqToComments.Key.User.Login;
                 // Make sure that the pull request author is also a member
                 // (i.e., whether they committed to this repository at least once)
                 if (pullReqAuthor != null && memberUsernames.Contains(pullReqAuthor))
                 {
-                    foreach (PullRequestReviewComment comment in mapPullReqToComments.Value)
+                    foreach (IssueComment comment in mapPullReqToComments.Value)
                     {
                         string pullReqCommenter = comment.User.Login;
                         // Make sure that the pull request commenter is also a member

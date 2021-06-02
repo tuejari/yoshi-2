@@ -190,21 +190,22 @@ namespace YOSHI.DataRetrieverNS
         }
 
         /// <summary>
-        /// Filter out all comments that are not within the time window, do not have an author, or are not considered
-        /// current members (i.e., have not committed in the last 90 days).
+        /// Filter out all non-pull-request issue-comments that are not within the time window, do not have an author, 
+        /// or are not considered current members (i.e., have not committed in the last 90 days).
         /// </summary>
-        /// <param name="comments">A list of pull request comments to filter</param>
+        /// <param name="comments">A list of issue comments to filter</param>
         /// <param name="memberUsernames">A set of usernames of those considered members.</param>
         /// <returns>A filtered list of pull request comments</returns>
-        public static List<PullRequestReviewComment> FilterComments(IReadOnlyList<PullRequestReviewComment> comments, HashSet<string> memberUsernames)
+        public static List<IssueComment> FilterComments(IReadOnlyList<IssueComment> comments, HashSet<string> memberUsernames)
         {
             // Filter out all comments that are not within the time window, do not have an author, or are not 
             // considered current members (i.e., have not committed in the last 90 days). 
             // Note: the 3 months period cannot be added as a parameter in the GitHub API request.
-            List<PullRequestReviewComment> filteredComments = new List<PullRequestReviewComment>();
-            foreach (PullRequestReviewComment comment in comments)
+            List<IssueComment> filteredComments = new List<IssueComment>();
+            foreach (IssueComment comment in comments)
             {
-                if ((CheckWithinTimeWindow(comment.UpdatedAt) || CheckWithinTimeWindow(comment.CreatedAt))
+                if (comment.HtmlUrl.Contains("pull")
+                    && (CheckWithinTimeWindow(comment.UpdatedAt) || CheckWithinTimeWindow(comment.CreatedAt))
                     && comment.User != null
                     && comment.User.Login != null
                     && memberUsernames.Contains(comment.User.Login))

@@ -20,7 +20,7 @@ namespace YOSHI.CommunityData
         public IReadOnlyList<GitHubCommit> Commits { get; set; }
         public List<GitHubCommit> CommitsWithinTimeWindow { get; set; }
         public IReadOnlyList<CommitComment> CommitComments { get; set; }
-        public Dictionary<PullRequest, List<PullRequestReviewComment>> MapPullReqsToComments { get; set; }
+        public Dictionary<PullRequest, List<IssueComment>> MapPullReqsToComments { get; set; }
         // Regarding the difference between Watchers and Stargazers:
         // https://developer.github.com/changes/2012-09-05-watcher-api/
         // Watchers/Subscribers are users watching the repository. Watching a repository registers the user to receive
