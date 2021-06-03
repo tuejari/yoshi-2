@@ -32,6 +32,9 @@ namespace YOSHI.CharacteristicProcessorNS
         {
             // We transform the lists of contributors and collaborators to only the usernames, so it becomes easier
             // to compute the difference of two lists. 
+            // NOTE: We mention that we use the commit committers and the pull request mergers as collaborators.
+            // The list of commits includes the pull request merge commits. Therefore we do not have to pass the pull
+            // requests to this method.
             HashSet<string> committers = new HashSet<string>();
             HashSet<string> authors = new HashSet<string>();
 
@@ -44,7 +47,7 @@ namespace YOSHI.CharacteristicProcessorNS
 
                 if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames))
                 {
-                    committers.Add(commit.Author.Login);
+                    authors.Add(commit.Author.Login);
                 }
             }
             HashSet<string> contributors = authors.Except(committers).ToHashSet();

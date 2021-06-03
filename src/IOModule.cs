@@ -141,6 +141,7 @@ namespace YOSHI
             public CommunityMap()
             {
                 // TODO: Add logging for start and end of time window
+                // TODO: Maybe also add logging for the estimated numbers of contributors/collaborators
                 this.Map(m => m.RepoName).Index(00);
                 this.Map(m => m.RepoOwner).Index(10);
 
