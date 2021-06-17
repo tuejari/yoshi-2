@@ -64,7 +64,8 @@ namespace YOSHI.DataRetrieverNS
 
                 // There must be at least 100 commits
                 Console.WriteLine("Retrieving all commits...");
-                IReadOnlyList<GitHubCommit> commits = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.GetAll, repoOwner, repoName, MaxSizeBatches);
+                CommitRequest commitRequest = new CommitRequest { Until = Filters.EndDateTimeWindow };
+                IReadOnlyList<GitHubCommit> commits = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.GetAll, repoOwner, repoName, commitRequest, MaxSizeBatches);
 
                 Console.WriteLine("Filtering commits...");
                 List<GitHubCommit> commitsWithinTimeWindow = Filters.ExtractCommitsWithinTimeWindow(commits);
@@ -90,7 +91,8 @@ namespace YOSHI.DataRetrieverNS
                 // There must be at least one closed milestone
                 Console.WriteLine("Retrieving closed milestones...");
                 MilestoneRequest stateFilter = new MilestoneRequest { State = ItemStateFilter.Closed };
-                data.Milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
+                IReadOnlyList<Milestone> milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
+                data.Milestones = Filters.FilterMilestones(milestones); // Remove milestones after the end time
                 if (data.Milestones.Count < 1)
                 {
                     throw new InvalidRepositoryException("Too few milestones (" + data.Milestones.Count + ").");
@@ -192,6 +194,9 @@ namespace YOSHI.DataRetrieverNS
                 Console.WriteLine("Filtering detailed commits...");
                 data.CommitsWithinTimeWindow = Filters.FilterDetailedCommits(detailedCommitsWithinTimeWindow, data.MemberUsernames);
 
+                // Set the first and last commit from the time window
+                (data.FirstCommitDateTime, data.LastCommitDateTime) = Filters.FirstLastCommit(data.CommitsWithinTimeWindow);
+
                 // A member is considered active if they made a commit in the last 30 days
                 Console.WriteLine("Extracting active users...");
                 data.ActiveMembers = Filters.ExtractMembersFromCommits(data.CommitsWithinTimeWindow, data.MemberUsernames, 30);
@@ -200,10 +205,12 @@ namespace YOSHI.DataRetrieverNS
                 IReadOnlyList<CommitComment> commitComments = await GitHubRateLimitHandler.Delegate(Client.Repository.Comment.GetAllForRepository, repoOwner, repoName, MaxSizeBatches);
                 data.CommitComments = Filters.FilterComments(commitComments, data.MemberUsernames);
 
+                // Snapshot at time of retrieval, there is no way to retrieve watchers from a past time
                 Console.WriteLine("Retrieving watchers...");
                 IReadOnlyList<User> watchers = await GitHubRateLimitHandler.Delegate(Client.Activity.Watching.GetAllWatchers, repoOwner, repoName, MaxSizeBatches);
                 data.Watchers = Filters.ExtractUsernamesFromUsers(watchers, data.MemberUsernames);
 
+                // Snapshot at time of retrieval, there is no way to retrieve stargazers from a past time
                 Console.WriteLine("Retrieving stargazers...");
                 IReadOnlyList<User> stargazers = await GitHubRateLimitHandler.Delegate(Client.Activity.Starring.GetAllStargazers, repoOwner, repoName, MaxSizeBatches);
                 data.Stargazers = Filters.ExtractUsernamesFromUsers(stargazers, data.MemberUsernames);
@@ -239,6 +246,7 @@ namespace YOSHI.DataRetrieverNS
             {
                 try
                 {
+                    // Snapshot at time of retrieval, there is no way to retrieve users information from a past time
                     User user = await GitHubRateLimitHandler.Delegate(Client.User.Get, username);
 
                     // Exclude organizations and bots
@@ -311,15 +319,18 @@ namespace YOSHI.DataRetrieverNS
             foreach (string username in memberUsernames)
             {
                 // Get the given user's followers, limited to members that are also part of the current repository
+                // Snapshot at time of retrieval, there is no way to retrieve followers from a past time
                 IReadOnlyList<User> followers = await GitHubRateLimitHandler.Delegate(Client.User.Followers.GetAll, username, MaxSizeBatches);
                 HashSet<string> followersNames = Filters.ExtractUsernamesFromUsers(followers, memberUsernames);
 
                 // Get the given user's users that they're following, limited to members that are also part of the current repository
+                // Snapshot at time of retrieval, there is no way to retrieve following from a past time
                 IReadOnlyList<User> following = await GitHubRateLimitHandler.Delegate(Client.User.Followers.GetAllFollowing, username, MaxSizeBatches);
                 HashSet<string> followingNames = Filters.ExtractUsernamesFromUsers(following, memberUsernames);
 
                 // TODO: Check whether these repositories are all repositories that the user has at least one commit to the main branch / gh-pages
                 // Currently: Assume that they have all contributed to their owned repositories
+                // Snapshot at time of retrieval, there is no way to retrieve repositories from a past time
                 IReadOnlyList<Repository> repositories =
                     await GitHubRateLimitHandler.Delegate(Client.Repository.GetAllForUser, username, MaxSizeBatches);
                 HashSet<string> repos = Filters.ExtractRepoNamesFromRepos(repositories, repoName);
@@ -405,7 +416,9 @@ namespace YOSHI.DataRetrieverNS
                 {
                     string[] splitUrl = comment.HtmlUrl.Split(new char[] { '/', '#' });
                     int pullRequestNumber = int.Parse(splitUrl[6]);
-                    PullRequest pullRequest = pullRequestByNumber[pullRequestNumber]; // TODO: non-matching key 9973, 10977
+                    PullRequest pullRequest = pullRequestByNumber[pullRequestNumber]; 
+                    // It is possible that there are non-matching keys, which means the pull request was created and
+                    // last updated outside the time window
                     mapPullReqsToComments[pullRequest].Add(comment);
                 }
                 catch

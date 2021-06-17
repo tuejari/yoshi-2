@@ -87,6 +87,30 @@ namespace YOSHI.DataRetrieverNS
             throw new Exception("Failed too many times to retrieve GitHub data.");
         }
 
+        /// <param name="maxBatchSize">Setting API options to retrieve max batch sizes, reducing the number of requests.</param>
+        public async static Task<T> Delegate<T>(
+            Func<string, string, CommitRequest, ApiOptions, Task<T>> func,
+            string repoOwner,
+            string repoName,
+            CommitRequest commitRequest,
+            ApiOptions maxBatchSize)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    Task<T> task = func(repoOwner, repoName, commitRequest, maxBatchSize);
+                    return await task;
+                }
+                catch (RateLimitExceededException)
+                {
+                    // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
+                    WaitUntilReset();
+                }
+            }
+            throw new Exception("Failed too many times to retrieve GitHub data.");
+        }
+
         /// <param name="state">The milestone request applying a state filter. Can be "open", "closed", or "all".
         /// https://docs.github.com/en/rest/reference/issues#list-milestones
         /// </param>

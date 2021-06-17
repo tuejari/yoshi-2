@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using YOSHI.CommunityData;
+using YOSHI.DataRetrieverNS;
 using YOSHI.DataRetrieverNS.Geocoding;
 
 namespace YOSHI
@@ -78,6 +79,22 @@ namespace YOSHI
                 int bingRequestsLeft = Convert.ToInt32(Console.ReadLine());
                 GeoService.BingRequestsLeft = bingRequestsLeft;
 
+                // Set the enddate of the time window, it defaults to use midnight UTC time.
+                // It is possible to enter a specific time, but this has not been tested.
+                DateTimeOffset endDate;
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine("Enter end date of time window (YYYY-MM-DD) in UTC");
+                Console.ResetColor();
+                while (!DateTimeOffset.TryParse(Console.ReadLine(), out endDate))
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine("Invalid date");
+                    Console.WriteLine("Enter end date of time window (YYYY-MM-DD) in UTC");
+                    Console.ResetColor();
+                }
+                // Make sure that it is counted as UTC datetime and not as a local time
+                Filters.SetTimeWindow(endDate);
+
                 return ReadFile(inFile);
             }
             catch (IOException e)
@@ -144,8 +161,8 @@ namespace YOSHI
                 // TODO: Maybe also add logging for the estimated numbers of contributors/collaborators
                 this.Map(m => m.RepoOwner).Index(0);
                 this.Map(m => m.RepoName).Index(1);
-                this.Map(m => m.Data.StartDateTime).Name("StartTime").Index(2);
-                this.Map(m => m.Data.EndDateTime).Name("EndTime").Index(3);
+                this.Map(m => m.Data.FirstCommitDateTime).Name("StartTime").Index(2);
+                this.Map(m => m.Data.LastCommitDateTime).Name("EndTime").Index(3);
 
                 // Report number of members and the number of locations known, as well as the number of hofstede locations known.
                 // Then we can decide afterward whether we exclude certain communities, if we have too little information.

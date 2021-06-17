@@ -11,19 +11,16 @@ namespace YOSHI.DataRetrieverNS
     /// </summary>
     public static class Filters
     {
-        public static DateTimeOffset Now { get; set; }
-        public static DateTimeOffset StartDateTimeWindow { get; set; }
+        public static DateTimeOffset EndDateTimeWindow { get; private set; }
+        public static DateTimeOffset StartDateTimeWindow { get; private set; }
 
-        public static void SetSnapshotWindow(Data data)
+        public static void SetTimeWindow(DateTimeOffset endDateTimeWindow)
         {
             int days = 90; // snapshot period of 3 months (approximated using 90 days)
-            // Note: Currently other periods are not supported.
+            // Note: Currently other length periods are not supported.
             // Engagementprocessor uses hardcoded month thresholds of 30 and 60
-            Now = DateTimeOffset.UtcNow;
-            StartDateTimeWindow = Now.AddDays(-days);
-
-            data.EndDateTime = Now.ToString();
-            data.StartDateTime = StartDateTimeWindow.ToString();
+            EndDateTimeWindow = endDateTimeWindow;
+            StartDateTimeWindow = EndDateTimeWindow.AddDays(-days);            
         }
 
         /// <summary>
@@ -116,6 +113,19 @@ namespace YOSHI.DataRetrieverNS
             }
             // TODO: Apply alias resolution
             return usernames;
+        }
+
+        public static IReadOnlyList<Milestone> FilterMilestones(IReadOnlyList<Milestone> milestones)
+        {
+            List<Milestone> milestonesInTimeWindow = new List<Milestone>();
+            foreach (Milestone milestone in milestones)
+            {
+                if (milestone.ClosedAt != null && milestone.ClosedAt <= EndDateTimeWindow)
+                {
+                    milestonesInTimeWindow.Add(milestone);
+                }
+            }
+            return milestonesInTimeWindow;
         }
 
         /// <summary>
@@ -222,6 +232,34 @@ namespace YOSHI.DataRetrieverNS
         }
 
         /// <summary>
+        /// Given a list of commits, this method extracts the first and last commit date and returns them as formatted 
+        /// strings.
+        /// </summary>
+        /// <param name="commits">List of commits to extract the first and last commit dates from</param>
+        /// <returns>First and last commit dates as formatted strings.</returns>
+        public static (string, string) FirstLastCommit(List<GitHubCommit> commits)
+        {
+            DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
+            DateTimeOffset dateLastCommit = DateTimeOffset.MinValue;
+            foreach (GitHubCommit commit in commits)
+            {
+                DateTimeOffset dateCurrentCommit = commit.Commit.Committer.Date;
+                // If current earliest commit is later than current commit
+                if (dateFirstCommit.CompareTo(dateCurrentCommit) > 0)
+                {
+                    dateFirstCommit = dateCurrentCommit;
+                }
+                // If current latest commit is earlier than current commit
+                if (dateLastCommit.CompareTo(dateCurrentCommit) < 0)
+                {
+                    dateLastCommit = dateCurrentCommit;
+                }
+            }
+
+            return (dateFirstCommit.ToString("yyyy-MM-dd HH:mm:ss"), dateLastCommit.ToString("yyyy-MM-dd HH:mm:ss"));
+        }
+
+        /// <summary>
         /// Filter out all comments that are not within the time window, do not have an author, or are not considered
         /// current members (i.e., have not committed in the last 90 days).
         /// </summary>
@@ -246,8 +284,8 @@ namespace YOSHI.DataRetrieverNS
 
         /// <summary>
         /// A method that takes a DateTimeOffset object and checks whether it is within the specified time window x number 
-        /// of days (Default: 3 months,  i.e., x = 90 days). This window ends at the time of data retrieval and starts at 
-        /// midnight x days prior.
+        /// of days (Default: 3 months,  i.e., x = 90 days). This window ends at the specified end of the time window and 
+        /// starts at midnight x days prior.
         /// </summary>
         /// <param name="dateTime">A DateTimeOffset object</param>
         /// <returns>Whether the DateTimeOffset object falls within the time window.</returns>
@@ -259,8 +297,8 @@ namespace YOSHI.DataRetrieverNS
             }
 
             // We set the date time offset window for the 3 months earlier from now (approximated using 90 days)
-            DateTimeOffset startDate = Now.AddDays(-days);
-            return dateTime >= startDate;
+            DateTimeOffset startDate = EndDateTimeWindow.AddDays(-days);
+            return dateTime >= startDate && dateTime <= EndDateTimeWindow;
         }
 
         /// <summary>

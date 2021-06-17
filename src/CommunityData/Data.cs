@@ -9,8 +9,8 @@ namespace YOSHI.CommunityData
     /// </summary>
     public class Data
     {
-        public string StartDateTime { get; set; }
-        public string EndDateTime { get; set; }
+        public string FirstCommitDateTime { get; set; }
+        public string LastCommitDateTime { get; set; }
         public List<User> Members { get; set; }
         public HashSet<string> MemberUsernames { get; set; }
         // Followers and following are limited to users that also worked on this repository

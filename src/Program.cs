@@ -43,8 +43,6 @@ namespace YOSHI
                     Console.WriteLine("Started processing community {0} from {1}. Time: {2}", community.RepoName, community.RepoOwner, DateTime.Now.ToString());
                     Console.ResetColor();
 
-                    Filters.SetSnapshotWindow(community.Data);
-
                     // Retrieving GitHub data needed to compute whether the community is valid (i.e., it has at least
                     // 100 commits (all time), it has at least 10 members active in the last 90 days, it has at least
                     // 1 milestone (all time), and it has enough location data to compute dispersion. 
