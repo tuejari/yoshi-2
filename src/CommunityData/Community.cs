@@ -8,7 +8,7 @@
     {
         public string RepoOwner { get; }
         public string RepoName { get; }
-        public GitHubData Data { get; }
+        public Data Data { get; }
         public Metrics Metrics { get; }
         public Characteristics Characteristics { get; }
         public Pattern Pattern { get; set; }
@@ -17,7 +17,7 @@
         {
             this.RepoOwner = owner;
             this.RepoName = name;
-            this.Data = new GitHubData();
+            this.Data = new Data();
             this.Metrics = new Metrics();
             this.Characteristics = new Characteristics();
             this.Pattern = new Pattern();

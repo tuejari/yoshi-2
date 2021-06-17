@@ -1,6 +1,7 @@
 ﻿using Octokit;
 using System;
 using System.Collections.Generic;
+using YOSHI.CommunityData;
 
 namespace YOSHI.DataRetrieverNS
 {
@@ -10,15 +11,19 @@ namespace YOSHI.DataRetrieverNS
     /// </summary>
     public static class Filters
     {
-        public static readonly DateTimeOffset Now;
-        public static readonly DateTimeOffset StartDateTimeWindow;
-        static Filters()
+        public static DateTimeOffset Now { get; set; }
+        public static DateTimeOffset StartDateTimeWindow { get; set; }
+
+        public static void SetSnapshotWindow(Data data)
         {
             int days = 90; // snapshot period of 3 months (approximated using 90 days)
             // Note: Currently other periods are not supported.
             // Engagementprocessor uses hardcoded month thresholds of 30 and 60
             Now = DateTimeOffset.UtcNow;
             StartDateTimeWindow = Now.AddDays(-days);
+
+            data.EndDateTime = Now.ToString();
+            data.StartDateTime = StartDateTimeWindow.ToString();
         }
 
         /// <summary>

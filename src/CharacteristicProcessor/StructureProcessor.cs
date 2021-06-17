@@ -15,7 +15,7 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <param name="community">The community for which we need to compute the structure.</param>
         public static void ComputeStructure(Community community)
         {
-            GitHubData data = community.Data;
+            Data data = community.Data;
             // Note: we compute all connections between members and obtain member graphs that are currently unused 
             // TODO: Use/Export the graph. Currently it is tracked, but not used.
             Graph<string> structureGraph = new Graph<string>();

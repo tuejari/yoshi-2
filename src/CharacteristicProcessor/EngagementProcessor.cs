@@ -16,7 +16,7 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <param name="community">The community for which we need to compute the engagement.</param>
         private static void ComputeEngagement(Community community)
         {
-            GitHubData data = community.Data;
+            Data data = community.Data;
             Engagement engagement = community.Metrics.Engagement;
             engagement.MedianNrCommentsPerPullReq =
                 MedianNrCommentsPerPullReq(data.MapPullReqsToComments);

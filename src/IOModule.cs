@@ -142,8 +142,10 @@ namespace YOSHI
             {
                 // TODO: Add logging for start and end of time window
                 // TODO: Maybe also add logging for the estimated numbers of contributors/collaborators
-                this.Map(m => m.RepoName).Index(00);
-                this.Map(m => m.RepoOwner).Index(10);
+                this.Map(m => m.RepoOwner).Index(0);
+                this.Map(m => m.RepoName).Index(1);
+                this.Map(m => m.Data.StartDateTime).Name("StartTime").Index(2);
+                this.Map(m => m.Data.EndDateTime).Name("EndTime").Index(3);
 
                 // Report number of members and the number of locations known, as well as the number of hofstede locations known.
                 // Then we can decide afterward whether we exclude certain communities, if we have too little information.

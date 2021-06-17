@@ -43,20 +43,13 @@ namespace YOSHI
                     Console.WriteLine("Started processing community {0} from {1}. Time: {2}", community.RepoName, community.RepoOwner, DateTime.Now.ToString());
                     Console.ResetColor();
 
+                    Filters.SetSnapshotWindow(community.Data);
+
                     // Retrieving GitHub data needed to compute whether the community is valid (i.e., it has at least
                     // 100 commits (all time), it has at least 10 members active in the last 90 days, it has at least
                     // 1 milestone (all time), and it has enough location data to compute dispersion. 
                     Console.WriteLine("Retrieving GitHub data needed for checking validity...");
-                    bool valid = await DataRetriever.RetrieveDataAndCheckValidity(community);
-                    if (!valid)
-                    {
-                        // TODO: specify why it is not valid
-                        // Skip this repository if it is not valid
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine("Community {0} from {1} is not valid", community.RepoName, community.RepoOwner);
-                        Console.ResetColor();
-                        continue;
-                    }
+                    await DataRetriever.RetrieveDataAndCheckValidity(community);
 
                     // Retrieving GitHub data needed to compute whether the community exhibits a structure
                     Console.WriteLine("Retrieving GitHub data needed for computing structure...");
@@ -103,6 +96,17 @@ namespace YOSHI
                     Console.ResetColor();
                     failedCommunities.Add(community.RepoName, e.Message);
                     break;
+                }
+                catch (InvalidRepositoryException e)
+                {
+                    // TODO: specify why it is not valid
+                    // Skip this repository if it is not valid
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("Community {0} from {1} is not valid", community.RepoName, community.RepoOwner);
+                    Console.WriteLine("Exception: {0}. {1}", e.GetType(), e.Message);
+                    Console.ResetColor();
+                    failedCommunities.Add(community.RepoName, e.Message);
+                    continue;
                 }
                 catch (Exception e)
                 {

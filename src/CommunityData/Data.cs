@@ -7,8 +7,10 @@ namespace YOSHI.CommunityData
     /// <summary>
     /// This class is responsible for storing all community related data that was retrieved from GitHub. 
     /// </summary>
-    public class GitHubData
+    public class Data
     {
+        public string StartDateTime { get; set; }
+        public string EndDateTime { get; set; }
         public List<User> Members { get; set; }
         public HashSet<string> MemberUsernames { get; set; }
         // Followers and following are limited to users that also worked on this repository

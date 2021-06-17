@@ -47,11 +47,11 @@ namespace YOSHI.DataRetrieverNS
         /// <param name="community">The community for which we need to retrieve GitHub Data.</param>
         /// <returns>A boolean whether the community is valid or not.</returns>
         /// <exception cref="Exception">Thrown when something goes wrong while retrieving GitHub data.</exception>
-        public static async Task<bool> RetrieveDataAndCheckValidity(Community community)
+        public static async Task RetrieveDataAndCheckValidity(Community community)
         {
             string repoName = community.RepoName;
             string repoOwner = community.RepoOwner;
-            GitHubData data = community.Data;
+            Data data = community.Data;
 
             // Inspection of projects, requirements are at least 100 commits, at least 10 members, at least 50,000 LOC, must use milestones and issues
             try
@@ -77,14 +77,14 @@ namespace YOSHI.DataRetrieverNS
                 (data.Members, data.MemberUsernames) = await RetrieveMembers(data.MemberUsernames);
                 if (data.MemberUsernames.Count < 10)
                 {
-                    return false;
+                    throw new InvalidRepositoryException("Too few members (" + data.MemberUsernames.Count + ").");
                 }
 
                 Console.WriteLine("Filtering all commits from non-members...");
                 data.Commits = Filters.FilterAllCommits(commits, data.MemberUsernames);
-                if (commits.Count < 100)
+                if (data.Commits.Count < 100)
                 {
-                    return false;
+                    throw new InvalidRepositoryException("Too few commits (" + data.Commits.Count + ").");
                 }
 
                 // There must be at least one closed milestone
@@ -93,7 +93,7 @@ namespace YOSHI.DataRetrieverNS
                 data.Milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
                 if (data.Milestones.Count < 1)
                 {
-                    return false;
+                    throw new InvalidRepositoryException("Too few milestones (" + data.Milestones.Count + ").");
                 }
 
                 // There must be enough location data available to compute dispersion. TODO: Determine the threshold (maybe as percentage)
@@ -103,10 +103,18 @@ namespace YOSHI.DataRetrieverNS
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("Bing Maps API requests remaining: {0}", GeoService.BingRequestsLeft);
                 Console.ResetColor();
-                if (data.Coordinates.Count < 2 && data.Countries.Count < 2)
+                if (data.Coordinates.Count < 2)
                 {
-                    return false;
+                    throw new InvalidRepositoryException("Too few coordinates (" + data.Coordinates.Count + ").");
                 }
+                if (data.Countries.Count < 2)
+                {
+                    throw new InvalidRepositoryException("Too few addresses in Hofstede indexed countries (" + data.Countries.Count + ").");
+                }
+            }
+            catch (InvalidRepositoryException)
+            {
+                throw;
             }
             catch
             {
@@ -115,8 +123,6 @@ namespace YOSHI.DataRetrieverNS
                 Console.ResetColor();
                 throw;
             }
-
-            return true;
         }
 
         /// <summary>
@@ -133,7 +139,7 @@ namespace YOSHI.DataRetrieverNS
 
             string repoName = community.RepoName;
             string repoOwner = community.RepoOwner;
-            GitHubData data = community.Data;
+            Data data = community.Data;
             try
             {
                 Console.WriteLine("Retrieving data per member...");
@@ -171,7 +177,7 @@ namespace YOSHI.DataRetrieverNS
 
             string repoName = community.RepoName;
             string repoOwner = community.RepoOwner;
-            GitHubData data = community.Data;
+            Data data = community.Data;
             try
             {
                 Console.WriteLine("Extract commits within time window...");
