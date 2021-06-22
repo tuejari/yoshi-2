@@ -282,7 +282,7 @@ namespace YOSHI.DataRetrieverNS
                 timespan = (DateTimeOffset)whenDoesTheLimitReset - DateTimeOffset.Now;
                 timespan = timespan.Add(TimeSpan.FromSeconds(30)); // Add 30 seconds to the timespan
 
-                Console.WriteLine("GitHub Rate Limit reached.");
+                Console.WriteLine("GitHub Rate Limit reached. Time: " + DateTime.Now.ToString());
                 Console.WriteLine("Waiting until: " + limitReset.AddSeconds(30).DateTime.ToLocalTime().ToString());
             }
             else
@@ -293,7 +293,7 @@ namespace YOSHI.DataRetrieverNS
             Console.ResetColor(); // Reset before sleep, otherwise color remains even when application is closed during the sleep.
             Thread.Sleep(timespan); // Wait until the rate limit resets
             Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine("Done waiting for the rate limit reset, continuing now: " + DateTimeOffset.Now.DateTime.ToLocalTime().ToString());
+            Console.WriteLine("Done waiting for the rate limit reset, continuing now: " + DateTime.Now.ToString());
             Console.ResetColor();
         }
     }

@@ -75,9 +75,7 @@ namespace YOSHI
                     {
                         // The community exhibits no structure, hence we cannot compute a pattern. Thus we skip computing 
                         // all other characteristics.
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine("This community does not exhibit a structure.");
-                        Console.ResetColor();
+                        throw new InvalidRepositoryException("This project does not exhibit a community structure.");
                     }
 
                     Console.WriteLine("Writing community data to file...");
