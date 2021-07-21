@@ -188,8 +188,8 @@ namespace YOSHI
                 this.Map(m => m.Metrics.Engagement.MedianActiveMember).Index(120);
                 this.Map(m => m.Metrics.Engagement.MedianWatcher).Index(130);
                 this.Map(m => m.Metrics.Engagement.MedianStargazer).Index(140);
-                this.Map(m => m.Metrics.Engagement.MedianCommitDistribution).Index(150);
-                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution).Index(160);
+                this.Map(m => m.Metrics.Engagement.MedianMonthlyCommitDistribution).Index(150);
+                this.Map(m => m.Metrics.Engagement.MedianMonthlyFileCollabDistribution).Index(160);
 
                 this.Map(m => m.Metrics.Longevity.MeanCommitterLongevity).Index(170);
 
@@ -218,8 +218,8 @@ namespace YOSHI
 
                 this.Map(m => m.Metrics.Formality.MeanMembershipTypeOld).Index(360);
 
-                this.Map(m => m.Metrics.Engagement.MedianMonthlyCommitDistribution).Index(370);
-                this.Map(m => m.Metrics.Engagement.MedianMonthlyFileCollabDistribution).Index(380);
+                this.Map(m => m.Metrics.Engagement.MedianCommitDistribution).Index(370);
+                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution).Index(380);
             }
         }
     }
