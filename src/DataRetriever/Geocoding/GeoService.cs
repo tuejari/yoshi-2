@@ -37,6 +37,8 @@ namespace YOSHI.DataRetrieverNS.Geocoding
                     if (member.Location != null)
                     {
                         BingAddress address = await GetBingAddress(member.Location);
+                        // EXTRA LOGGING FOR RETROACTIVE ANALYSIS
+                        Console.WriteLine("GitHub Address: {0}, Coordinates: {1}, CountryRegion: {2}", member.Location, address.Coordinates.ToString(), address.CountryRegion);
                         coordinates.Add(address.Coordinates);
                         // Note: The ContainsKey method of the Hofstede dictionary has been adjusted to be case insensitive and 
                         // diacritic insensitive

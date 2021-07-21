@@ -12,5 +12,9 @@
         public double MedianStargazer { get; set; }
         public double MedianCommitDistribution { get; set; }
         public double MedianFileCollabDistribution { get; set; }
+
+        // Extra variables for comparison between Yoshi and Yoshi 2
+        public double MedianMonthlyCommitDistribution { get; set; }
+        public double MedianMonthlyFileCollabDistribution { get; set; }
     }
 }

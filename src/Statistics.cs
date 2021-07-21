@@ -76,5 +76,16 @@ namespace YOSHI
                 throw new InvalidOperationException("List contains no elements");
             }
         }
+
+        /// <summary>
+        /// Easy access metthod to compute the standard deviation of a list of doubles.
+        /// </summary>
+        /// <param name="list">List to compute the standard deviation of. May not be empty.</param>
+        /// <returns>The standard deviation of the list.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when list is empty.</exception>
+        public static double ComputeStandardDeviation(List<double> list)
+        {
+            return list.Count > 0 ? Math.Sqrt(ComputeVariance(list)) : throw new InvalidOperationException("List contains no elements");
+        }
     }
 }

@@ -9,6 +9,8 @@ namespace YOSHI.CommunityData
     /// </summary>
     public class Data
     {
+        public string FirstCommitHash { get; set; }
+        public string LastCommitHash { get; set; }
         public string FirstCommitDateTime { get; set; }
         public string LastCommitDateTime { get; set; }
         public List<User> Members { get; set; }
@@ -22,6 +24,7 @@ namespace YOSHI.CommunityData
         public IReadOnlyList<GitHubCommit> Commits { get; set; }
         public List<GitHubCommit> CommitsWithinTimeWindow { get; set; }
         public IReadOnlyList<CommitComment> CommitComments { get; set; }
+        public List<PullRequest> MergedPullRequests { get; set; }
         public Dictionary<PullRequest, List<IssueComment>> MapPullReqsToComments { get; set; }
         // Regarding the difference between Watchers and Stargazers:
         // https://developer.github.com/changes/2012-09-05-watcher-api/
@@ -36,5 +39,7 @@ namespace YOSHI.CommunityData
 
         public List<Location> Coordinates { get; set; }
         public List<string> Countries { get; set; }
+        public int Contributors { get; set; }
+        public int Collaborators { get; set; }
     }
 }

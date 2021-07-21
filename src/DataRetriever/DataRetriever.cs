@@ -151,6 +151,19 @@ namespace YOSHI.DataRetrieverNS
                 Console.WriteLine("Retrieving pull requests...");
                 List<PullRequest> pullRequests = await RetrievePullRequests(repoOwner, repoName, data.MemberUsernames);
 
+                Console.WriteLine("Retrieve merged pull requests' details...");
+                List<PullRequest> mergedPullRequests = new List<PullRequest>();
+                
+                foreach (PullRequest pullRequest in pullRequests)
+                {
+                    if (pullRequest.Merged)
+                    {
+                        PullRequest detailedPullRequest = await GitHubRateLimitHandler.Delegate(Client.PullRequest.Get, repoOwner, repoName, pullRequest.Number);
+                        mergedPullRequests.Add(detailedPullRequest);
+                    }
+                }
+                data.MergedPullRequests = mergedPullRequests;
+
                 Console.WriteLine("Retrieving pull request comments...");
                 List<IssueComment> pullRequestComments = await RetrievePullRequestComments(repoOwner, repoName, data.MemberUsernames);
 
@@ -195,7 +208,7 @@ namespace YOSHI.DataRetrieverNS
                 data.CommitsWithinTimeWindow = Filters.FilterDetailedCommits(detailedCommitsWithinTimeWindow, data.MemberUsernames);
 
                 // Set the first and last commit from the time window
-                (data.FirstCommitDateTime, data.LastCommitDateTime) = Filters.FirstLastCommit(data.CommitsWithinTimeWindow);
+                (data.FirstCommitHash, data.LastCommitHash, data.FirstCommitDateTime, data.LastCommitDateTime) = Filters.FirstLastCommit(data.CommitsWithinTimeWindow);
 
                 // A member is considered active if they made a commit in the last 30 days
                 Console.WriteLine("Extracting active users...");
@@ -328,9 +341,10 @@ namespace YOSHI.DataRetrieverNS
                 IReadOnlyList<User> following = await GitHubRateLimitHandler.Delegate(Client.User.Followers.GetAllFollowing, username, MaxSizeBatches);
                 HashSet<string> followingNames = Filters.ExtractUsernamesFromUsers(following, memberUsernames);
 
-                // TODO: Check whether these repositories are all repositories that the user has at least one commit to the main branch / gh-pages
                 // Currently: Assume that they have all contributed to their owned repositories
                 // Snapshot at time of retrieval, there is no way to retrieve repositories from a past time
+                // Assumption: We assume that the users have a commit to all of their repositories, or if not that they 
+                // are working on a commit for that repository.
                 IReadOnlyList<Repository> repositories =
                     await GitHubRateLimitHandler.Delegate(Client.Repository.GetAllForUser, username, MaxSizeBatches);
                 HashSet<string> repos = Filters.ExtractRepoNamesFromRepos(repositories, repoName);
@@ -368,8 +382,6 @@ namespace YOSHI.DataRetrieverNS
         private static async Task<List<IssueComment>> RetrievePullRequestComments(string repoOwner, string repoName, HashSet<string> memberUsernames)
         {
             // Retrieve all pull request comments since the start of the time window and filter the comments
-            // TODO: does the since parameter from GitHub use createdAt or UpdatedAt? The documentation from GitHub API
-            // makes it seem like it is only updatedAt.
             // NOTE: There are two types of pull request comments, namely comments and review comments.
             // Only review comments are available through the pull request API. The other type of comments are available
             // through the Issues API, as GitHub's REST API v3 considers every pull request as an issue, but not every issue

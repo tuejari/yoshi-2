@@ -95,7 +95,6 @@ namespace YOSHI
                 }
                 catch (InvalidRepositoryException e)
                 {
-                    // TODO: specify why it is not valid
                     // Skip this repository if it is not valid
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine("Community {0} from {1} is not valid", community.RepoName, community.RepoOwner);

@@ -28,13 +28,17 @@ namespace YOSHI.CharacteristicProcessorNS
             engagement.MedianActiveMember = MedianContains(data.ActiveMembers, data.MemberUsernames);
             engagement.MedianWatcher = MedianContains(data.Watchers, data.MemberUsernames);
             engagement.MedianStargazer = MedianContains(data.Stargazers, data.MemberUsernames);
-            engagement.MedianCommitDistribution = MedianCommitDistribution(data.CommitsWithinTimeWindow, data.MemberUsernames);
-            engagement.MedianFileCollabDistribution = MedianFileCollabDistribution(data.CommitsWithinTimeWindow, data.MemberUsernames);
+            engagement.MedianMonthlyCommitDistribution = MedianMonthlyCommitDistribution(data.CommitsWithinTimeWindow, data.MemberUsernames);
+            engagement.MedianMonthlyFileCollabDistribution = MedianMonthlyFileCollabDistribution(data.CommitsWithinTimeWindow, data.MemberUsernames);
 
             community.Characteristics.Engagement =
                 (float)(engagement.MedianNrCommentsPerPullReq + engagement.MedianMonthlyPullCommitCommentsDistribution
                 + engagement.MedianActiveMember + engagement.MedianWatcher + engagement.MedianStargazer
-                + engagement.MedianCommitDistribution + engagement.MedianFileCollabDistribution) / 7;
+                + engagement.MedianMonthlyCommitDistribution + engagement.MedianMonthlyFileCollabDistribution) / 7;
+
+            // EXTRA COMPUTATIONS FOR COMPARISON METRICS
+            engagement.MedianCommitDistribution = MedianCommitDistribution(data.CommitsWithinTimeWindow, data.MemberUsernames);
+            engagement.MedianFileCollabDistribution = MedianFileCollabDistribution(data.CommitsWithinTimeWindow, data.MemberUsernames);
         }
 
         /// <summary>
@@ -99,7 +103,7 @@ namespace YOSHI.CharacteristicProcessorNS
                 {
                     nrCommentsPerMonth[CheckMonth(date)]++;
                 }
-                // TODO: Currently not yet a distribution
+                
                 meanCommentsPerMonthPerMember.Add(nrCommentsPerMonth.Average());
             }
 
@@ -149,167 +153,6 @@ namespace YOSHI.CharacteristicProcessorNS
             return Statistics.ComputeMedian(userValues);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="commitsWithinWindow"></param>
-        /// <param name="memberUsernames"></param>
-        /// <returns></returns>
-        private static double MedianCommitDistribution(List<GitHubCommit> commitsWithinWindow, HashSet<string> memberUsernames)
-        {
-            // TODO: Compute per month
-
-            Dictionary<string, int> nrCommitsPerUser = new Dictionary<string, int>();
-            foreach (string username in memberUsernames)
-            {
-                nrCommitsPerUser.Add(username, 0);
-            }
-
-            foreach (GitHubCommit commit in commitsWithinWindow)
-            {
-                // Note: all commits within the timewindow have already accessed committer, so we do not need to check
-                // that committer is not null.
-                if (Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames))
-                {
-                    nrCommitsPerUser[commit.Committer.Login]++;
-                }
-                // Prevent double counting a commit
-                if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames) && (!Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames) || (commit.Committer.Login != commit.Author.Login)))
-                {
-                    nrCommitsPerUser[commit.Author.Login]++;
-                }
-            }
-
-            return (double)Statistics.ComputeMedian(nrCommitsPerUser.Values.ToList()) / commitsWithinWindow.Count;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="commits"></param>
-        /// <param name="memberUsernames"></param>
-        /// <returns></returns>
-        private static double MedianFileCollabDistribution(List<GitHubCommit> commits, HashSet<string> memberUsernames)
-        {
-            // TODO: Compute per month
-
-            // Extract the committers per file and the changed filenames
-            (
-                HashSet<(string, string)> changedFileNames,
-                Dictionary<string, HashSet<string>> committersPerFile
-            ) = ExtractCommittersPerFile(commits, memberUsernames);
-
-            // Extract largest non-overlapping sets of changed filenames
-            Graph<string> filenamesGraph = new Graph<string>();
-            filenamesGraph.AddEdges(changedFileNames);
-            List<HashSet<string>> connectedComponents = filenamesGraph.GetConnectedComponents().ToList();
-
-            // Merge files in the dictionary whose names got changed
-            // Note: "ref" is used to indicate that committersPerFile may be modified by the method
-            MergeKeysWithUpdatedNames(connectedComponents, ref committersPerFile);
-
-            List<int> nrCommittersPerFile = committersPerFile.Values
-                                                  .Select(set => set.Count())
-                                                  .ToList();
-
-            return Statistics.ComputeMedian(nrCommittersPerFile) / nrCommittersPerFile.Count;
-        }
-
-        /// <summary>
-        /// Merge files in the dictionary whose names got changed
-        /// </summary>
-        /// <param name="updatedFilenames">A list of sets of updated filenames.</param>
-        /// <param name="committersPerFile">A dictionary of committers per file.</param>
-        private static void MergeKeysWithUpdatedNames(
-            List<HashSet<string>> updatedFilenames,
-            ref Dictionary<string, HashSet<string>> committersPerFile
-        )
-        {
-            foreach (HashSet<string> set in updatedFilenames)
-            {
-                // Find the filename used in the dictionary. The first one returned from this set will be kept in the
-                // dictionary
-                // Note: not all filenames need to occur in the dictionary, sometimes older files (outside the 3-month
-                // window) get their names changed (or relocated which causes their name to be changed)
-                string nameUsedInDict = "";
-                foreach (string name in set)
-                {
-                    if (committersPerFile.ContainsKey(name))
-                    {
-                        nameUsedInDict = name;
-                        break;
-                    }
-                }
-
-                // Remove the name from the set so we're left with the filenames that we want to remove from the dictionary
-                if (nameUsedInDict != "")
-                {
-                    set.Remove(nameUsedInDict);
-                }
-
-                // Foreach filename that we want to remove from the dictionary, merge their values with the file that we
-                // want to keep in the dictionary and remove it
-                foreach (string name in set)
-                {
-                    if (committersPerFile.ContainsKey(name))
-                    {
-                        committersPerFile[nameUsedInDict].UnionWith(committersPerFile[name]);
-                        committersPerFile.Remove(name);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Given a list of commits and a list of members, extract for each file the unique committers that have 
-        /// modified that file, while keeping track of name changes.
-        /// </summary>
-        /// <param name="commits"></param>
-        /// <param name="memberUsernames"></param>
-        /// <returns></returns>
-        private static (HashSet<(string, string)>, Dictionary<string, HashSet<string>>)
-            ExtractCommittersPerFile(List<GitHubCommit> commits, HashSet<string> memberUsernames)
-        {
-            HashSet<(string, string)> changedFileNames = new HashSet<(string, string)>(); // Used to keep track of changed filenames.
-            Dictionary<string, HashSet<string>> committersPerFile = new Dictionary<string, HashSet<string>>(); // Used to keep track of the unique committers/authors per file. 
-
-            foreach (GitHubCommit commit in commits)
-            {
-                // Loop over all files affected by the current commit
-                foreach (GitHubCommitFile file in commit.Files)
-                {
-                    if (file.Filename != null)
-                    {
-                        // Keep track of changed filenames, will be resolved later
-                        if (file.PreviousFileName != null)
-                        {
-                            changedFileNames.Add((file.Filename, file.PreviousFileName));
-                        }
-
-                        // Check if we previously saw this file, add as key to the dictionary, add the committer to its value
-                        if (!committersPerFile.ContainsKey(file.Filename))
-                        {
-                            committersPerFile.Add(file.Filename, new HashSet<string>());
-                        }
-
-                        if (Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames))
-                        {
-                            committersPerFile[file.Filename].Add(commit.Committer.Login);
-                        }
-
-                        // Add the commit author to the current file's entry in the dictionary
-                        if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames))
-                        {
-                            committersPerFile[file.Filename].Add(commit.Author.Login);
-                        }
-                    }
-                }
-            }
-
-            return (changedFileNames, committersPerFile);
-        }
-
-        // EXTRA METHODS FOR COMPUTING MORE METRICS FOR COMPARISON
         private static double MedianMonthlyCommitDistribution(List<GitHubCommit> commitsWithinWindow, HashSet<string> memberUsernames)
         {
             Dictionary<string, List<DateTimeOffset>> commitDatesPerMember = new Dictionary<string, List<DateTimeOffset>>();
@@ -325,7 +168,7 @@ namespace YOSHI.CharacteristicProcessorNS
                 if (Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames))
                 {
                     commitDatesPerMember[commit.Committer.Login].Add(commit.Commit.Committer.Date);
-                } 
+                }
                 // Prevent counting commits twice
                 if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames) && (!Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames) || (commit.Committer.Login != commit.Author.Login)))
                 {
@@ -451,6 +294,163 @@ namespace YOSHI.CharacteristicProcessorNS
             List<Dictionary<string, HashSet<string>>> committersPerFilePerMonth = new List<Dictionary<string, HashSet<string>>> { committersPerFileMonth0, committersPerFileMonth1, committersPerFileMonth2 };
 
             return committersPerFilePerMonth;
+        }
+
+        /// <summary>
+        /// Merge files in the dictionary whose names got changed
+        /// </summary>
+        /// <param name="updatedFilenames">A list of sets of updated filenames.</param>
+        /// <param name="committersPerFile">A dictionary of committers per file.</param>
+        private static void MergeKeysWithUpdatedNames(
+            List<HashSet<string>> updatedFilenames,
+            ref Dictionary<string, HashSet<string>> committersPerFile
+        )
+        {
+            foreach (HashSet<string> set in updatedFilenames)
+            {
+                // Find the filename used in the dictionary. The first one returned from this set will be kept in the
+                // dictionary
+                // Note: not all filenames need to occur in the dictionary, sometimes older files (outside the 3-month
+                // window) get their names changed (or relocated which causes their name to be changed)
+                string nameUsedInDict = "";
+                foreach (string name in set)
+                {
+                    if (committersPerFile.ContainsKey(name))
+                    {
+                        nameUsedInDict = name;
+                        break;
+                    }
+                }
+
+                // Remove the name from the set so we're left with the filenames that we want to remove from the dictionary
+                if (nameUsedInDict != "")
+                {
+                    set.Remove(nameUsedInDict);
+                }
+
+                // Foreach filename that we want to remove from the dictionary, merge their values with the file that we
+                // want to keep in the dictionary and remove it
+                foreach (string name in set)
+                {
+                    if (committersPerFile.ContainsKey(name))
+                    {
+                        committersPerFile[nameUsedInDict].UnionWith(committersPerFile[name]);
+                        committersPerFile.Remove(name);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Given a list of commits and a list of members, extract for each file the unique committers that have 
+        /// modified that file, while keeping track of name changes.
+        /// </summary>
+        /// <param name="commits"></param>
+        /// <param name="memberUsernames"></param>
+        /// <returns></returns>
+        private static (HashSet<(string, string)>, Dictionary<string, HashSet<string>>)
+            ExtractCommittersPerFile(List<GitHubCommit> commits, HashSet<string> memberUsernames)
+        {
+            HashSet<(string, string)> changedFileNames = new HashSet<(string, string)>(); // Used to keep track of changed filenames.
+            Dictionary<string, HashSet<string>> committersPerFile = new Dictionary<string, HashSet<string>>(); // Used to keep track of the unique committers/authors per file. 
+
+            foreach (GitHubCommit commit in commits)
+            {
+                // Loop over all files affected by the current commit
+                foreach (GitHubCommitFile file in commit.Files)
+                {
+                    if (file.Filename != null)
+                    {
+                        // Keep track of changed filenames, will be resolved later
+                        if (file.PreviousFileName != null)
+                        {
+                            changedFileNames.Add((file.Filename, file.PreviousFileName));
+                        }
+
+                        // Check if we previously saw this file, add as key to the dictionary, add the committer to its value
+                        if (!committersPerFile.ContainsKey(file.Filename))
+                        {
+                            committersPerFile.Add(file.Filename, new HashSet<string>());
+                        }
+
+                        if (Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames))
+                        {
+                            committersPerFile[file.Filename].Add(commit.Committer.Login);
+                        }
+
+                        // Add the commit author to the current file's entry in the dictionary
+                        if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames))
+                        {
+                            committersPerFile[file.Filename].Add(commit.Author.Login);
+                        }
+                    }
+                }
+            }
+
+            return (changedFileNames, committersPerFile);
+        }
+
+        // EXTRA METHODS FOR COMPUTING MORE METRICS FOR COMPARISON
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="commitsWithinWindow"></param>
+        /// <param name="memberUsernames"></param>
+        /// <returns></returns>
+        private static double MedianCommitDistribution(List<GitHubCommit> commitsWithinWindow, HashSet<string> memberUsernames)
+        {
+            Dictionary<string, int> nrCommitsPerUser = new Dictionary<string, int>();
+            foreach (string username in memberUsernames)
+            {
+                nrCommitsPerUser.Add(username, 0);
+            }
+
+            foreach (GitHubCommit commit in commitsWithinWindow)
+            {
+                // Note: all commits within the timewindow have already accessed committer, so we do not need to check
+                // that committer is not null.
+                if (Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames))
+                {
+                    nrCommitsPerUser[commit.Committer.Login]++;
+                }
+                // Prevent double counting a commit
+                if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames) && (!Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames) || (commit.Committer.Login != commit.Author.Login)))
+                {
+                    nrCommitsPerUser[commit.Author.Login]++;
+                }
+            }
+
+            return (double)Statistics.ComputeMedian(nrCommitsPerUser.Values.ToList()) / commitsWithinWindow.Count;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="commits"></param>
+        /// <param name="memberUsernames"></param>
+        /// <returns></returns>
+        private static double MedianFileCollabDistribution(List<GitHubCommit> commits, HashSet<string> memberUsernames)
+        {
+            // Extract the committers per file and the changed filenames
+            (
+                HashSet<(string, string)> changedFileNames,
+                Dictionary<string, HashSet<string>> committersPerFile
+            ) = ExtractCommittersPerFile(commits, memberUsernames);
+
+            // Extract largest non-overlapping sets of changed filenames
+            Graph<string> filenamesGraph = new Graph<string>();
+            filenamesGraph.AddEdges(changedFileNames);
+            List<HashSet<string>> connectedComponents = filenamesGraph.GetConnectedComponents().ToList();
+
+            // Merge files in the dictionary whose names got changed
+            // Note: "ref" is used to indicate that committersPerFile may be modified by the method
+            MergeKeysWithUpdatedNames(connectedComponents, ref committersPerFile);
+
+            List<int> nrCommittersPerFile = committersPerFile.Values
+                                                  .Select(set => set.Count())
+                                                  .ToList();
+
+            return Statistics.ComputeMedian(nrCommittersPerFile) / nrCommittersPerFile.Count;
         }
     }
 }

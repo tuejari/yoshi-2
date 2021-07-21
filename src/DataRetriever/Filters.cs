@@ -19,8 +19,8 @@ namespace YOSHI.DataRetrieverNS
             int days = 90; // snapshot period of 3 months (approximated using 90 days)
             // Note: Currently other length periods are not supported.
             // Engagementprocessor uses hardcoded month thresholds of 30 and 60
-            EndDateTimeWindow = endDateTimeWindow;
-            StartDateTimeWindow = EndDateTimeWindow.AddDays(-days);            
+            EndDateTimeWindow = endDateTimeWindow.ToUniversalTime();
+            StartDateTimeWindow = EndDateTimeWindow.AddDays(-days);
         }
 
         /// <summary>
@@ -101,12 +101,12 @@ namespace YOSHI.DataRetrieverNS
             foreach (GitHubCommit commit in commits)
             {
                 // Check that committer date also falls within the time window before adding the author in the list of members
-                if (commit.Committer != null && commit.Committer.Login != null && CheckWithinTimeWindow(commit.Commit.Committer.Date, days))
+                if (commit.Committer != null && commit.Committer.Login != null && commit.Committer.Login != "web-flow" && CheckWithinTimeWindow(commit.Commit.Committer.Date, days))
                 {
                     usernames.Add(commit.Committer.Login);
                 }
                 // Check that author date also falls within the time window before adding the author in the list of members
-                if (commit.Author != null && commit.Author.Login != null && CheckWithinTimeWindow(commit.Commit.Author.Date, days))
+                if (commit.Author != null && commit.Author.Login != null && commit.Author.Login != "web-flow" && CheckWithinTimeWindow(commit.Commit.Author.Date, days))
                 {
                     usernames.Add(commit.Author.Login);
                 }
@@ -237,8 +237,10 @@ namespace YOSHI.DataRetrieverNS
         /// </summary>
         /// <param name="commits">List of commits to extract the first and last commit dates from</param>
         /// <returns>First and last commit dates as formatted strings.</returns>
-        public static (string, string) FirstLastCommit(List<GitHubCommit> commits)
+        public static (string, string, string, string) FirstLastCommit(List<GitHubCommit> commits)
         {
+            string hashFirstCommit = "";
+            string hashLastCommit = "";
             DateTimeOffset dateFirstCommit = DateTimeOffset.MaxValue;
             DateTimeOffset dateLastCommit = DateTimeOffset.MinValue;
             foreach (GitHubCommit commit in commits)
@@ -248,15 +250,20 @@ namespace YOSHI.DataRetrieverNS
                 if (dateFirstCommit.CompareTo(dateCurrentCommit) > 0)
                 {
                     dateFirstCommit = dateCurrentCommit;
+                    hashFirstCommit = commit.Sha;
                 }
                 // If current latest commit is earlier than current commit
                 if (dateLastCommit.CompareTo(dateCurrentCommit) < 0)
                 {
                     dateLastCommit = dateCurrentCommit;
+                    hashLastCommit = commit.Sha;
                 }
             }
 
-            return (dateFirstCommit.ToString("yyyy-MM-dd HH:mm:ss"), dateLastCommit.ToString("yyyy-MM-dd HH:mm:ss"));
+            dateFirstCommit.ToUniversalTime();
+            dateLastCommit.ToUniversalTime();
+
+            return (hashFirstCommit, hashLastCommit, dateFirstCommit.ToString("yyyy-MM-dd HH:mm:ss zzz"), dateLastCommit.ToString("yyyy-MM-dd HH:mm:ss zzz"));
         }
 
         /// <summary>

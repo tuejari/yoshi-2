@@ -9,5 +9,8 @@
         public float Milestones { get; set; }
         public float Lifetime { get; set; }
 
+        // Mean membership type value implemented per the original Yoshi's buggy implementation
+        // Used for comparison between Yoshi and Yoshi 2
+        public float MeanMembershipTypeOld { get; set; }
     }
 }

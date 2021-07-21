@@ -64,6 +64,29 @@ namespace YOSHI.DataRetrieverNS
             throw new Exception("Failed too many times to retrieve GitHub data.");
         }
 
+        /// <param name="number">Number of the pull request to retrieve.</param>
+        public async static Task<T> Delegate<T>(
+            Func<string, string, int, Task<T>> func,
+            string repoOwner,
+            string repoName,
+            int number)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    Task<T> task = func(repoOwner, repoName, number);
+                    return await task;
+                }
+                catch (RateLimitExceededException)
+                {
+                    // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
+                    WaitUntilReset();
+                }
+            }
+            throw new Exception("Failed too many times to retrieve GitHub data.");
+        }
+
         /// <param name="maxBatchSize">Setting API options to retrieve max batch sizes, reducing the number of requests.</param>
         public async static Task<T> Delegate<T>(
             Func<string, string, ApiOptions, Task<T>> func,

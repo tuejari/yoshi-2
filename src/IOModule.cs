@@ -85,7 +85,7 @@ namespace YOSHI
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine("Enter end date of time window (YYYY-MM-DD) in UTC");
                 Console.ResetColor();
-                while (!DateTimeOffset.TryParse(Console.ReadLine(), out endDate))
+                while (!DateTimeOffset.TryParseExact(Console.ReadLine(),"yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out endDate))
                 {
                     Console.ForegroundColor = ConsoleColor.DarkGray;
                     Console.WriteLine("Invalid date");
@@ -157,18 +157,20 @@ namespace YOSHI
         {
             public CommunityMap()
             {
-                // TODO: Add logging for start and end of time window
-                // TODO: Maybe also add logging for the estimated numbers of contributors/collaborators
                 this.Map(m => m.RepoOwner).Index(0);
                 this.Map(m => m.RepoName).Index(1);
-                this.Map(m => m.Data.FirstCommitDateTime).Name("StartTime").Index(2);
-                this.Map(m => m.Data.LastCommitDateTime).Name("EndTime").Index(3);
+                this.Map(m => m.Data.FirstCommitHash).Index(2);
+                this.Map(m => m.Data.LastCommitHash).Index(3);
+                this.Map(m => m.Data.FirstCommitDateTime).Name("StartTime").Index(4);
+                this.Map(m => m.Data.LastCommitDateTime).Name("EndTime").Index(5);
 
                 // Report number of members and the number of locations known, as well as the number of hofstede locations known.
                 // Then we can decide afterward whether we exclude certain communities, if we have too little information.
                 this.Map(m => m.Data.Members.Count).Name("NrMembers").Index(12);
                 this.Map(m => m.Data.Coordinates.Count).Name("NrLocations").Index(15);
                 this.Map(m => m.Data.Countries.Count).Name("NrHiCountries").Index(17);
+                this.Map(m => m.Data.Contributors).Name("NrContributors").Index(18);
+                this.Map(m => m.Data.Collaborators).Name("NrCollaborators").Index(19);
 
                 this.Map(m => m.Metrics.Structure.CommonProjects).Index(20);
                 this.Map(m => m.Metrics.Structure.Followers).Index(30);
@@ -209,6 +211,15 @@ namespace YOSHI
                 this.Map(m => m.Pattern.FN).Index(310);
                 this.Map(m => m.Pattern.IN).Index(320);
                 this.Map(m => m.Pattern.CoP).Index(330);
+
+                // EXTRA VARIABLES FOR COMPARIONS BETWEEN YOSHI AND YOSHI 2
+                this.Map(m => m.Metrics.Dispersion.AverageGeographicalDistance).Index(340);
+                this.Map(m => m.Metrics.Dispersion.AverageCulturalDispersion).Index(350);
+
+                this.Map(m => m.Metrics.Formality.MeanMembershipTypeOld).Index(360);
+
+                this.Map(m => m.Metrics.Engagement.MedianMonthlyCommitDistribution).Index(370);
+                this.Map(m => m.Metrics.Engagement.MedianMonthlyFileCollabDistribution).Index(380);
             }
         }
     }

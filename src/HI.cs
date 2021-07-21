@@ -10,7 +10,6 @@ namespace YOSHI
     /// </summary>
     public static class HI
     {
-        // TODO: check whether to divide the indices by 100
         public readonly static Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)> Hofstede
         = new Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)>(new CaseAccentInsensitiveEqualityComparer())
         {

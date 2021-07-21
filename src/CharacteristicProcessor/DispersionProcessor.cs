@@ -1,6 +1,7 @@
 ﻿using Geocoding;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using YOSHI.CommunityData;
 
 namespace YOSHI.CharacteristicProcessorNS
@@ -35,6 +36,14 @@ namespace YOSHI.CharacteristicProcessorNS
 
             // Determine the global dispersion
             community.Characteristics.Dispersion = Math.Sqrt((varianceGeographicalDistance + varianceCulturalDistance) / 2);
+
+            // EXTRA COMPUTATIONS FOR COMPARISON YOSHI AND YOSHI 2
+            community.Metrics.Dispersion.AverageGeographicalDistance = distances.Average();
+            double averagePdi = Statistics.ComputeStandardDeviation(pdis);
+            double averageIdv = Statistics.ComputeStandardDeviation(idvs);
+            double averageMas = Statistics.ComputeStandardDeviation(mass);
+            double averageUai = Statistics.ComputeStandardDeviation(uais);
+            community.Metrics.Dispersion.AverageCulturalDispersion = (averagePdi + averageIdv + averageMas + averageUai) / 4.0;
         }
 
         /// <summary>
