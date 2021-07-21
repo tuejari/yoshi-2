@@ -173,7 +173,8 @@ namespace YOSHI.CharacteristicProcessorNS
                 {
                     nrCommitsPerUser[commit.Committer.Login]++;
                 }
-                if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames))
+                // Prevent double counting a commit
+                if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames) && (!Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames) || (commit.Committer.Login != commit.Author.Login)))
                 {
                     nrCommitsPerUser[commit.Author.Login]++;
                 }
@@ -306,6 +307,150 @@ namespace YOSHI.CharacteristicProcessorNS
             }
 
             return (changedFileNames, committersPerFile);
+        }
+
+        // EXTRA METHODS FOR COMPUTING MORE METRICS FOR COMPARISON
+        private static double MedianMonthlyCommitDistribution(List<GitHubCommit> commitsWithinWindow, HashSet<string> memberUsernames)
+        {
+            Dictionary<string, List<DateTimeOffset>> commitDatesPerMember = new Dictionary<string, List<DateTimeOffset>>();
+            foreach (string username in memberUsernames)
+            {
+                commitDatesPerMember.Add(username, new List<DateTimeOffset>());
+            }
+
+            foreach (GitHubCommit commit in commitsWithinWindow)
+            {
+                // Note: all commits within the timewindow have already accessed committer, so we do not need to check
+                // that committer is not null.
+                if (Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames))
+                {
+                    commitDatesPerMember[commit.Committer.Login].Add(commit.Commit.Committer.Date);
+                } 
+                // Prevent counting commits twice
+                if (Filters.ValidAuthorWithinTimeWindow(commit, memberUsernames) && (!Filters.ValidCommitterWithinTimeWindow(commit, memberUsernames) || (commit.Committer.Login != commit.Author.Login)))
+                {
+                    commitDatesPerMember[commit.Author.Login].Add(commit.Commit.Author.Date);
+                }
+            }
+
+            List<double> meanCommitsPerMonthPerMember = new List<double>();
+            foreach (string username in memberUsernames)
+            {
+                // Check for each comment in which month it took place and compute the average comments per month for this member
+                List<int> nrCommentsPerMonth = new List<int> { 0, 0, 0 };
+                foreach (DateTimeOffset date in commitDatesPerMember[username])
+                {
+                    nrCommentsPerMonth[CheckMonth(date)]++;
+                }
+
+                meanCommitsPerMonthPerMember.Add(nrCommentsPerMonth.Average());
+            }
+
+            return Statistics.ComputeMedian(meanCommitsPerMonthPerMember);
+        }
+
+        private static double MedianMonthlyFileCollabDistribution(List<GitHubCommit> commitsWithinWindow, HashSet<string> memberUsernames)
+        {
+            // Extract the changed filenames
+            HashSet<(string, string)> changedFileNames = ExtractCommittersPerFile(commitsWithinWindow, memberUsernames).Item1;
+
+            // Extract largest non-overlapping sets of changed filenames
+            Graph<string> filenamesGraph = new Graph<string>();
+            filenamesGraph.AddEdges(changedFileNames);
+            List<HashSet<string>> connectedComponents = filenamesGraph.GetConnectedComponents().ToList();
+
+            // Extract the committers per file per month
+            List<Dictionary<string, HashSet<string>>> committersPerFilePerMonth = ExtractCommittersPerFilePerMonth(commitsWithinWindow, memberUsernames);
+
+            Dictionary<string, int[]> countcommittersPerFilePerMonth = new Dictionary<string, int[]>();
+            // Loop over 3 months
+            for (int i = 0; i < 2; i++)
+            {
+                // Merge files in the dictionary whose names got changed
+                // Note: "ref" is used to indicate that committersPerFile may be modified by the method
+                Dictionary<string, HashSet<string>> committersPerFile = committersPerFilePerMonth[i];
+                MergeKeysWithUpdatedNames(connectedComponents, ref committersPerFile);
+                foreach (KeyValuePair<string, HashSet<string>> fileCommitters in committersPerFile)
+                {
+                    if (!countcommittersPerFilePerMonth.ContainsKey(fileCommitters.Key))
+                    {
+                        countcommittersPerFilePerMonth.Add(fileCommitters.Key, new int[3]);
+                    }
+                    countcommittersPerFilePerMonth[fileCommitters.Key][i] = fileCommitters.Value.Count;
+                }
+            }
+
+            List<double> meanCommittersPerFilePerMonth = new List<double>();
+            foreach (KeyValuePair<string, int[]> nrCommittersPerFilePerMonth in countcommittersPerFilePerMonth)
+            {
+                meanCommittersPerFilePerMonth.Add(nrCommittersPerFilePerMonth.Value.Average());
+            }
+
+            return Statistics.ComputeMedian(meanCommittersPerFilePerMonth);
+        }
+
+        /// <summary>
+        /// Given a list of commits and a list of members, extract for each file the unique committers that have 
+        /// modified that file, while keeping track of name changes.
+        /// </summary>
+        /// <param name="commits"></param>
+        /// <param name="memberUsernames"></param>
+        /// <returns></returns>
+        private static List<Dictionary<string, HashSet<string>>>
+            ExtractCommittersPerFilePerMonth(List<GitHubCommit> commits, HashSet<string> memberUsernames)
+        {
+
+            List<GitHubCommit> commitsMonth0 = new List<GitHubCommit>();
+            List<GitHubCommit> commitsMonth1 = new List<GitHubCommit>();
+            List<GitHubCommit> commitsMonth2 = new List<GitHubCommit>();
+            foreach (GitHubCommit commit in commits)
+            {
+                // Extract commit date
+                DateTimeOffset? date = null;
+                if (commit.Commit != null && commit.Commit.Committer != null && commit.Commit.Committer.Date != null)
+                {
+                    date = commit.Commit.Committer.Date;
+                }
+                else if (commit.Commit != null && commit.Commit.Author != null && commit.Commit.Author.Date != null)
+                {
+                    date = commit.Commit.Committer.Date;
+                }
+
+                // If date is not null, add the commit to the correct month
+                if (date != null)
+                {
+                    switch (CheckMonth((DateTimeOffset)date))
+                    {
+                        case 0:
+                            commitsMonth0.Add(commit);
+                            break;
+                        case 1:
+                            commitsMonth1.Add(commit);
+                            break;
+                        case 2:
+                            commitsMonth2.Add(commit);
+                            break;
+                    }
+                }
+            }
+
+            // Compute per month the changed file names and the committers per file
+            (
+                HashSet<(string, string)> _,
+                Dictionary<string, HashSet<string>> committersPerFileMonth0
+            ) = ExtractCommittersPerFile(commitsMonth0, memberUsernames);
+            (
+                HashSet<(string, string)> _,
+                Dictionary<string, HashSet<string>> committersPerFileMonth1
+            ) = ExtractCommittersPerFile(commitsMonth1, memberUsernames);
+            (
+                HashSet<(string, string)> _,
+                Dictionary<string, HashSet<string>> committersPerFileMonth2
+            ) = ExtractCommittersPerFile(commitsMonth2, memberUsernames);
+
+            List<Dictionary<string, HashSet<string>>> committersPerFilePerMonth = new List<Dictionary<string, HashSet<string>>> { committersPerFileMonth0, committersPerFileMonth1, committersPerFileMonth2 };
+
+            return committersPerFilePerMonth;
         }
     }
 }
