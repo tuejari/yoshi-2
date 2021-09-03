@@ -1,8 +1,8 @@
-﻿namespace YOSHI.CommunityData
+namespace YOSHI.CommunityData
 {
     /// <summary>
-    /// This class is responsible for storing all community related data. I.e., we will use this class to store the 
-    /// community data in separate objects. 
+    /// This class is responsible for storing all community related data. 
+    /// We will use this class to store the community data in separate objects. 
     /// </summary>
     public class Community
     {

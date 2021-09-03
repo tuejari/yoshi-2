@@ -1,7 +1,6 @@
-﻿using Octokit;
+using Octokit;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using YOSHI.CommunityData;
 
@@ -42,10 +41,11 @@ namespace YOSHI.DataRetrieverNS
         public static async Task ExtractStats(Community community)
         {
             string repoName = community.RepoName;
-            string repoOwner = community.RepoOwner;   
+            string repoOwner = community.RepoOwner;
 
             try
             {
+                // Retrieve repository statistics and check whether or not they should be excluded according to our exclusion criteria
                 Repository repo = await GitHubRateLimitHandler.Delegate(Client.Repository.Get, repoOwner, repoName);
                 if (repo.Fork)
                 {
@@ -64,14 +64,16 @@ namespace YOSHI.DataRetrieverNS
                 }
 
                 MilestoneRequest stateFilter = new MilestoneRequest { State = ItemStateFilter.Closed };
-                IReadOnlyList<Milestone> milestones = await GitHubRateLimitHandler.Delegate(Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
+                IReadOnlyList<Milestone> milestones = await GitHubRateLimitHandler.Delegate(
+                    Client.Issue.Milestone.GetAllForRepository, repoOwner, repoName, stateFilter, MaxSizeBatches);
                 if (milestones.Count < 1)
                 {
                     Console.WriteLine("{0}, {1}, No milestones", repoOwner, repoName);
                     return;
                 }
 
-                IReadOnlyList<RepositoryContributor> contributors = await GitHubRateLimitHandler.Delegate(Client.Repository.GetAllContributors, repoOwner, repoName);
+                IReadOnlyList<RepositoryContributor> contributors = await GitHubRateLimitHandler.Delegate(
+                    Client.Repository.GetAllContributors, repoOwner, repoName);
                 if (contributors.Count < 10)
                 {
                     Console.WriteLine("{0}, {1}, Too few contributors: {2}", repoOwner, repoName, contributors.Count);
@@ -79,18 +81,21 @@ namespace YOSHI.DataRetrieverNS
                 }
 
                 CommitRequest commitRequest = new CommitRequest { Until = Filters.EndDateTimeWindow };
-                IReadOnlyList<GitHubCommit> commits = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.GetAll, repoOwner, repoName, commitRequest, MaxSizeBatches);
+                IReadOnlyList<GitHubCommit> commits = await GitHubRateLimitHandler.Delegate(
+                    Client.Repository.Commit.GetAll, repoOwner, repoName, commitRequest, MaxSizeBatches);
                 if (commits.Count < 100)
                 {
                     Console.WriteLine("{0}, {1}, Too few commits: {2}", repoOwner, repoName, commits.Count);
                     return;
                 }
 
-                IReadOnlyList<RepositoryTag> tags = await GitHubRateLimitHandler.Delegate(Client.Repository.GetAllTags, repoOwner, repoName, MaxSizeBatches);
+                IReadOnlyList<RepositoryTag> tags = await GitHubRateLimitHandler.Delegate(
+                    Client.Repository.GetAllTags, repoOwner, repoName, MaxSizeBatches);
                 int numTags = 0;
                 foreach (RepositoryTag tag in tags)
                 {
-                    GitHubCommit cmt = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.Get, repoOwner, repoName, tag.Commit.Sha);
+                    GitHubCommit cmt = await GitHubRateLimitHandler.Delegate(
+                        Client.Repository.Commit.Get, repoOwner, repoName, tag.Commit.Sha);
                     if (cmt.Commit != null && cmt.Commit.Committer != null && cmt.Commit.Committer.Date < Filters.EndDateTimeWindow)
                     {
                         numTags++;
@@ -110,21 +115,30 @@ namespace YOSHI.DataRetrieverNS
                     }
                 }
                 // The following line was used to extract the characteristics for the communities analyzed by YOSHI. 
-                //Console.WriteLine("{0}/{1}: {2}, {3}, {4}, {5}", repoOwner, repoName, numTags, commits.Count, members.Count, repo.Language);
+                //Console.WriteLine("{0}/{1}: {2}, {3}, {4}, {5}",
+                //repoOwner, repoName, numTags, commits.Count, members.Count, repo.Language);
 
-                Branch mainBranch = await GitHubRateLimitHandler.Delegate(Client.Repository.Branch.Get, repoOwner, repoName, repo.DefaultBranch);
-                GitHubCommit commit = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.Get, repoOwner, repoName, mainBranch.Commit.Sha);
+                Branch mainBranch = await GitHubRateLimitHandler.Delegate(
+                    Client.Repository.Branch.Get, repoOwner, repoName, repo.DefaultBranch);
+                GitHubCommit commit = await GitHubRateLimitHandler.Delegate(
+                    Client.Repository.Commit.Get, repoOwner, repoName, mainBranch.Commit.Sha);
                 if (commit.Commit.Committer.Date <= new DateTime(2021, 4, 13))
                 {
                     Console.WriteLine("{0}, {1}, Too old latest commit: {2}", repoOwner, repoName, commit.Commit.Committer.Date);
                     return;
                 }
 
-                IReadOnlyList<Release> releases = await GitHubRateLimitHandler.Delegate(Client.Repository.Release.GetAll, repoOwner, repoName, MaxSizeBatches);
-                IReadOnlyList<User> watchers = await GitHubRateLimitHandler.Delegate(Client.Activity.Watching.GetAllWatchers, repoOwner, repoName, MaxSizeBatches);
+                IReadOnlyList<Release> releases = await GitHubRateLimitHandler.Delegate(
+                    Client.Repository.Release.GetAll, repoOwner, repoName, MaxSizeBatches);
+                IReadOnlyList<User> watchers = await GitHubRateLimitHandler.Delegate(
+                    Client.Activity.Watching.GetAllWatchers, repoOwner, repoName, MaxSizeBatches);
 
-                Console.WriteLine(repo.Id.ToString() + ';' + repoOwner + ';' + repoName + ";;" + releases.Count.ToString() + ';' + commits.Count.ToString() + ';' + contributors.Count.ToString() + ';' + milestones.Count.ToString() + ';' + repo.Language.ToString() + ";;;" + repo.StargazersCount.ToString() + ';' + watchers.Count.ToString() + ';' + repo.ForksCount.ToString() + ';' + repo.Size.ToString() + ";;" + commit.Commit.Committer.Date.ToString() + ";https://github.com/" + repoOwner + '/' + repoName + ";;" + repo.Description);
-            } 
+                Console.WriteLine(repo.Id.ToString() + ';' + repoOwner + ';' + repoName + ";;" + releases.Count.ToString() + ';'
+                    + commits.Count.ToString() + ';' + contributors.Count.ToString() + ';' + milestones.Count.ToString() + ';'
+                    + repo.Language.ToString() + ";;;" + repo.StargazersCount.ToString() + ';' + watchers.Count.ToString() + ';'
+                    + repo.ForksCount.ToString() + ';' + repo.Size.ToString() + ";;" + commit.Commit.Committer.Date.ToString()
+                    + ";https://github.com/" + repoOwner + '/' + repoName + ";;" + repo.Description);
+            }
             catch
             {
                 // Do nothing

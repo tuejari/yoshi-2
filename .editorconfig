@@ -4,6 +4,14 @@ root = true
 # C# files
 [*.cs]
 
+# Ruleset to remove dead code
+dotnet_diagnostic.CA1801.severity = error
+dotnet_diagnostic.CA1804.severity = error
+dotnet_diagnostic.CA1811.severity = error
+dotnet_diagnostic.CA1812.severity = error
+dotnet_diagnostic.CA1823.severity = error
+dotnet_diagnostic.C6259.severity = error
+
 #### Core EditorConfig Options ####
 
 # Indentation and spacing
@@ -208,5 +216,8 @@ dotnet_naming_style.begins_with_i.capitalization = pascal_case
 
 # Ruler 
 [*.{cs,vb}]
-guidelines = 120
+guidelines = 83
 guidelines_style = 1px solid 40ff0000
+
+charset = utf-8
+dotnet_diagnostic.CA1508.severity=error
