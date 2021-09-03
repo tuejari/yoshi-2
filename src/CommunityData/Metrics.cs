@@ -1,4 +1,4 @@
-﻿using YOSHI.CommunityData.MetricData;
+using YOSHI.CommunityData.MetricData;
 
 namespace YOSHI.CommunityData
 {

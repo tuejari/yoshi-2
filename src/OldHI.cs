@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -97,17 +97,17 @@ namespace YOSHI
             { "venezuela", (81, 12, 73, 76) },
             { "zambia", (64, 27, 41, 52) },
             // Below are all variations of "united states" (except vancouver)
-            //{ "san francisco", (40, 91, 62, 46) },
+            //{ "san francisco", (40, 91, 62, 46) },
             //{ "usa", (40, 91, 62, 46) },
             //{ "california", (40, 91, 62, 46) },
             //{ "boston", (40, 91, 62, 46) },
             //{ "texas", (40, 91, 62, 46) },
             //{ "atlanta", (40, 91, 62, 46) },
             //{ "vancouver", (40, 91, 62, 46) } // City in Canada, our tool finds Canada, hence does not use these values once. We cannot simply replace "vancouver" with Canada.
-            //{ "mountain view", (40, 91, 62, 46) },
+            //{ "mountain view", (40, 91, 62, 46) },
             //{ "chicago", (40, 91, 62, 46) },
             //{ "seattle", (40, 91, 62, 46) },
-            //{ "menlo park", (40, 91, 62, 46) },
+            //{ "menlo park", (40, 91, 62, 46) },
         };
 
         /// <summary>

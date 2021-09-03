@@ -1,4 +1,4 @@
-﻿using Geocoding;
+using Geocoding;
 using Octokit;
 using System.Collections.Generic;
 

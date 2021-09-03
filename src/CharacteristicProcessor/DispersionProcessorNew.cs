@@ -1,4 +1,4 @@
-﻿using Geocoding;
+using Geocoding;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,4 +1,4 @@
-﻿using Geocoding;
+using Geocoding;
 using Geocoding.Microsoft;
 using Octokit;
 using System;

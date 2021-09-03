@@ -1,4 +1,4 @@
-﻿namespace YOSHI.CommunityData
+namespace YOSHI.CommunityData
 {
     /// <summary>
     /// This class is responsible for storing specific computed values for community characteristics. 
