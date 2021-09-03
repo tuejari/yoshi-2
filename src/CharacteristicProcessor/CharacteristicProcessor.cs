@@ -16,8 +16,11 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <param name="community">The community for which we need to compute the characteristics.</param>
         public static void ComputeMiscellaneousCharacteristics(Community community)
         {
-            Console.WriteLine("Computing community dispersion...");
-            ComputeDispersion(community);
+            if (!(community.Data.Coordinates.Count < 2 || community.Data.Countries.Count < 2))
+            {
+                Console.WriteLine("Computing community dispersion...");
+                ComputeDispersion(community);
+            }
             Console.WriteLine("Computing community formality...");
             ComputeFormality(community);
             Console.WriteLine("Computing community engagement...");

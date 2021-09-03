@@ -34,7 +34,7 @@ namespace YOSHI.CharacteristicProcessorNS
             community.Characteristics.Engagement =
                 (float)(engagement.MedianNrCommentsPerPullReq + engagement.MedianMonthlyPullCommitCommentsDistribution
                 + engagement.MedianActiveMember + engagement.MedianWatcher + engagement.MedianStargazer
-                + engagement.MedianMonthlyCommitDistribution + engagement.MedianMonthlyFileCollabDistribution) / 7;
+                + engagement.MedianMonthlyCommitDistribution + engagement.MedianMonthlyFileCollabDistribution);
 
             // EXTRA COMPUTATIONS FOR COMPARISON METRICS
             engagement.MedianCommitDistribution = MedianCommitDistribution(data.CommitsWithinTimeWindow, data.MemberUsernames);
@@ -43,13 +43,20 @@ namespace YOSHI.CharacteristicProcessorNS
 
         /// <summary>
         /// Given a list pull requests and a list of members within the snapshot period, compute the median number of 
-        /// pull request comments per pull request for each member. I.e., compute for each member the average number of 
-        /// pull request comments per pull request, and compute the median. 
+        /// pull request comments per pull request. 
         /// </summary>
         /// <param name="mapPullReqsToComments">A mapping from pull requests to their corresponding comments.</param>
         /// <returns>The median value of pull request review comments per member.</returns>
         private static double MedianNrCommentsPerPullReq(Dictionary<PullRequest, List<IssueComment>> mapPullReqsToComments)
         {
+            if (mapPullReqsToComments.Count < 1)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("No pull requests within time window!");
+                Console.ResetColor();
+                return 0d;
+            }
+
             // Compute the comments per pull request
             // Note: the pull requests and comments not from members and not within the snapshot period have been
             // filtered in the DataRetriever.
@@ -72,6 +79,14 @@ namespace YOSHI.CharacteristicProcessorNS
         /// <returns>The median of all members' average (commit/pull-request) comments per month in the last 3 months.</returns>
         private static double MedianMonthlyCommentsDistribution(IReadOnlyList<CommitComment> commitComments, List<IssueComment> pullReqComments, HashSet<string> memberUsernames)
         {
+            if (commitComments.Count < 1 && pullReqComments.Count < 1)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("No commit or pull request comments within time window!");
+                Console.ResetColor();
+                return 0d;
+            }
+
             // Store the dates of the comments per member, so we can count the number of comments per month for each member
             Dictionary<string, List<DateTimeOffset>> commentDatesPerMember = new Dictionary<string, List<DateTimeOffset>>();
 

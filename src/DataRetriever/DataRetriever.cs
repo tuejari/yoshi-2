@@ -73,10 +73,10 @@ namespace YOSHI.DataRetrieverNS
                 Console.WriteLine("Extracting usernames from commits...");
                 data.MemberUsernames = Filters.ExtractUsernamesFromCommits(commitsWithinTimeWindow);
 
-                // There must be at least 10 members (active in the last 90 days)
+                // There must be at least 2 members (active in the last 90 days)
                 Console.WriteLine("Retrieving user data...");
                 (data.Members, data.MemberUsernames) = await RetrieveMembers(data.MemberUsernames);
-                if (data.MemberUsernames.Count < 10)
+                if (data.MemberUsernames.Count < 2)
                 {
                     throw new InvalidRepositoryException("Too few members (" + data.MemberUsernames.Count + ").");
                 }
