@@ -5,8 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using static YOSHI.OldHI;
 
-namespace YOSHI.DataRetrieverNS.Geocoding
+namespace YOSHI.Geocoding
 {
     public static class GeoService
     {
@@ -23,38 +24,24 @@ namespace YOSHI.DataRetrieverNS.Geocoding
         /// <returns>A list of addresses for the passed list of members</returns>
         /// <exception cref="GeocoderRateLimitException">Thrown when the Bing Rate Limit is exceeded.</exception>
         /// <exception cref="BingGeocodingException">Thrown when Bing Geocoding could not successfully retrieve a location.</exception>
-        public static async Task<(List<Location>, List<string>)> RetrieveMemberAddresses(List<User> members, string repoName)
+        public static async Task TestOldHICountries(List<string> oldHICountries)
         {
-            List<Location> coordinates = new List<Location>();
-            List<string> countries = new List<string>();
-
-            // NOTE: We loop over all user objects instead of usernames to access location data
-            foreach (User member in members)
+            CaseAccentInsensitiveEqualityComparer comparer = new CaseAccentInsensitiveEqualityComparer();
+            foreach (string country in oldHICountries)
             {
-                // Retrieve the member's addresses
                 try
                 {
-                    if (member.Location != null)
+                    BingAddress address = await GetBingAddress(country);
+                    if (!comparer.Equals(country, address.CountryRegion))
                     {
-                        BingAddress address = await GetBingAddress(member.Location);
-                        // EXTRA LOGGING FOR RETROACTIVE ANALYSIS
-                        Console.WriteLine("GitHub Address: {0}, Coordinates: {1}, CountryRegion: {2}", member.Location, address.Coordinates.ToString(), address.CountryRegion);
-                        coordinates.Add(address.Coordinates);
-                        // Note: The ContainsKey method of the Hofstede dictionary has been adjusted to be case insensitive and 
-                        // diacritic insensitive
-                        if (HI.Hofstede.ContainsKey(address.CountryRegion))
-                        {
-                            countries.Add(address.CountryRegion);
-                        }
+                        Console.WriteLine("OldHI: {0}, {1}",country,address.CountryRegion);
                     }
-                    // Note: We do not filter out all users that we do not have complete information from,
-                    // it could filter out information too aggressively.
                 }
                 catch (BingGeocodingException e)
                 {
                     // Continue with the next user if this user was causing an exception
                     Console.ForegroundColor = ConsoleColor.DarkYellow;
-                    Console.WriteLine("Could not retrieve the location from {0} in repo {1}", member.Login, repoName);
+                    Console.WriteLine("Could not retrieve the location from {0}", country);
                     Console.WriteLine(e.InnerException.Message);
                     Console.ResetColor();
                     continue;
@@ -64,7 +51,6 @@ namespace YOSHI.DataRetrieverNS.Geocoding
                     throw;
                 }
             }
-            return (coordinates, countries);
         }
 
         /// <summary>

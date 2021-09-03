@@ -11,7 +11,6 @@
         public Data Data { get; }
         public Metrics Metrics { get; }
         public Characteristics Characteristics { get; }
-        public Pattern Pattern { get; set; }
 
         public Community(string owner, string name)
         {
@@ -20,7 +19,6 @@
             this.Data = new Data();
             this.Metrics = new Metrics();
             this.Characteristics = new Characteristics();
-            this.Pattern = new Pattern();
         }
     }
 }

@@ -5,11 +5,7 @@
     /// </summary>
     public class Characteristics
     {
-        public bool Structure { get; set; }
-        public double Dispersion { get; set; }
-        public float Formality { get; set; }
-        public float Engagement { get; set; }
-        public float Longevity { get; set; }
-        public float Cohesion { get; set; }
+        public double OldDispersion { get; set; }
+        public double NewDispersion { get; set; }
     }
 }

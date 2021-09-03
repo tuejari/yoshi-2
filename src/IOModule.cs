@@ -5,8 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using YOSHI.CommunityData;
-using YOSHI.DataRetrieverNS;
-using YOSHI.DataRetrieverNS.Geocoding;
+using Geocoding;
 
 namespace YOSHI
 {
@@ -71,30 +70,6 @@ namespace YOSHI
                 csv.WriteHeader<Community>();
                 csv.NextRecord();
 
-                // https://docs.microsoft.com/en-us/bingmaps/getting-started/bing-maps-dev-center-help/understanding-bing-maps-transactions?redirectedfrom=MSDN
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine("Windows App, Non-profit, and Education keys can make 50,000 requests per 24 hour period.");
-                Console.WriteLine("Please enter the number of Bing Maps requests left.");
-                Console.ResetColor();
-                int bingRequestsLeft = Convert.ToInt32(Console.ReadLine());
-                GeoService.BingRequestsLeft = bingRequestsLeft;
-
-                // Set the enddate of the time window, it defaults to use midnight UTC time.
-                // It is possible to enter a specific time, but this has not been tested.
-                DateTimeOffset endDate;
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine("Enter end date of time window (YYYY-MM-DD) in UTC");
-                Console.ResetColor();
-                while (!DateTimeOffset.TryParseExact(Console.ReadLine(),"yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out endDate))
-                {
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-                    Console.WriteLine("Invalid date");
-                    Console.WriteLine("Enter end date of time window (YYYY-MM-DD) in UTC");
-                    Console.ResetColor();
-                }
-                // Make sure that it is counted as UTC datetime and not as a local time
-                Filters.SetTimeWindow(endDate);
-
                 return ReadFile(inFile);
             }
             catch (IOException e)
@@ -115,15 +90,66 @@ namespace YOSHI
             try
             {
                 using StreamReader reader = new StreamReader(inFile);
-                using CsvReader csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+                CsvConfiguration config = new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = "\t" };
+                using CsvReader csv = new CsvReader(reader, config);
                 csv.Read();
                 csv.ReadHeader();
+                string name = "";
+                Community community = null;
+                HashSet<string> countriesMissingHI = new HashSet<string>();
+                HashSet<string> countriesMissingOldHI = new HashSet<string>();
                 while (csv.Read())
                 {
-                    // The CSV file needs to have "RepoName" and "RepoOwner" as headers
-                    Community community = new Community(csv.GetField("RepoOwner"), csv.GetField("RepoName"));
-                    communities.Add(community);
+                    if (name != csv.GetField("RepoName"))
+                    {
+                        name = csv.GetField("RepoName");
+                        community = new Community(csv.GetField("RepoOwner"), csv.GetField("RepoName"));
+                        community.Data.Coordinates = new List<Location>();
+                        community.Data.OldCountries = new List<string>();
+                        community.Data.NewCountries = new List<string>();
+                        communities.Add(community);
+                    }                   
+
+                    double lat = Convert.ToDouble(csv.GetField("Latitude"));
+                    double lng = Convert.ToDouble(csv.GetField("Longitude"));
+                    community.Data.Coordinates.Add(new Location(lat, lng));
+
+                    string country = csv.GetField("CountryRegion");
+                    
+                    if (HI.Hofstede.ContainsKey(country))
+                    {
+                        community.Data.NewCountries.Add(country);
+                    }
+                    else
+                    {
+                        countriesMissingHI.Add(country);
+                    }
+
+                    if (OldHI.Hofstede.ContainsKey(country))
+                    {
+                        community.Data.OldCountries.Add(country);
+                    } 
+                    else
+                    {
+                        countriesMissingOldHI.Add(country);
+                    }
                 }
+
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("HI does not contain:");
+                foreach (string country in countriesMissingHI)
+                {
+                    Console.WriteLine(country);
+                }
+                Console.ResetColor();
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("OldHI does not contain:");
+                foreach (string country in countriesMissingOldHI)
+                {
+                    Console.WriteLine(country);
+                }
+                Console.ResetColor();
             }
             catch (IOException e)
             {
@@ -157,69 +183,34 @@ namespace YOSHI
         {
             public CommunityMap()
             {
-                this.Map(m => m.RepoOwner).Index(0);
+                //this.Map(m => m.RepoOwner).Index(0);
                 this.Map(m => m.RepoName).Index(1);
-                this.Map(m => m.Data.FirstCommitHash).Index(2);
-                this.Map(m => m.Data.LastCommitHash).Index(3);
-                this.Map(m => m.Data.FirstCommitDateTime).Name("StartTime").Index(4);
-                this.Map(m => m.Data.LastCommitDateTime).Name("EndTime").Index(5);
 
-                // Report number of members and the number of locations known, as well as the number of hofstede locations known.
-                // Then we can decide afterward whether we exclude certain communities, if we have too little information.
-                this.Map(m => m.Data.Members.Count).Name("NrMembers").Index(12);
-                this.Map(m => m.Data.Coordinates.Count).Name("NrLocations").Index(15);
-                this.Map(m => m.Data.Countries.Count).Name("NrHiCountries").Index(17);
-                this.Map(m => m.Data.Contributors).Name("NrContributors").Index(18);
-                this.Map(m => m.Data.Collaborators).Name("NrCollaborators").Index(19);
+                //this.Map(m => m.Data.Coordinates.Count).Name("NrLocations").Index(15);
+                //this.Map(m => m.Data.OldCountries.Count).Name("NrOldHiCountries").Index(17);
+                //this.Map(m => m.Data.NewCountries.Count).Name("NrNewHiCountries").Index(18);
 
-                this.Map(m => m.Metrics.Structure.CommonProjects).Index(20);
-                this.Map(m => m.Metrics.Structure.Followers).Index(30);
-                this.Map(m => m.Metrics.Structure.PullReqInteraction).Index(40);
+                //this.Map(m => m.Metrics.Dispersion.VarGeoDistance).Index(50);
 
-                this.Map(m => m.Metrics.Dispersion.VarianceGeographicalDistance).Index(50);
-                this.Map(m => m.Metrics.Dispersion.VarianceHofstedeCulturalDistance).Index(60);
+                //this.Map(m => m.Metrics.Dispersion.OldVariancePdi).Index(60);
+                //this.Map(m => m.Metrics.Dispersion.OldVarianceIdv).Index(61);
+                //this.Map(m => m.Metrics.Dispersion.OldVarianceMas).Index(62);
+                //this.Map(m => m.Metrics.Dispersion.OldVarianceUai).Index(63);
+                //this.Map(m => m.Metrics.Dispersion.OldVarCulDistance).Index(64);
 
-                this.Map(m => m.Metrics.Formality.MeanMembershipType).Index(70);
-                this.Map(m => m.Metrics.Formality.Milestones).Index(80);
-                this.Map(m => m.Metrics.Formality.Lifetime).Index(90);
+                this.Map(m => m.Metrics.Dispersion.NewVariancePdi).Index(65);
+                this.Map(m => m.Metrics.Dispersion.NewVarianceIdv).Index(66);
+                this.Map(m => m.Metrics.Dispersion.NewVarianceMas).Index(67);
+                this.Map(m => m.Metrics.Dispersion.NewVarianceUai).Index(68);
+                this.Map(m => m.Metrics.Dispersion.NewVarCulDistance).Index(69);
 
-                this.Map(m => m.Metrics.Engagement.MedianNrCommentsPerPullReq).Index(100);
-                this.Map(m => m.Metrics.Engagement.MedianMonthlyPullCommitCommentsDistribution).Index(110);
-                this.Map(m => m.Metrics.Engagement.MedianActiveMember).Index(120);
-                this.Map(m => m.Metrics.Engagement.MedianWatcher).Index(130);
-                this.Map(m => m.Metrics.Engagement.MedianStargazer).Index(140);
-                this.Map(m => m.Metrics.Engagement.MedianMonthlyCommitDistribution).Index(150);
-                this.Map(m => m.Metrics.Engagement.MedianMonthlyFileCollabDistribution).Index(160);
-
-                this.Map(m => m.Metrics.Longevity.MeanCommitterLongevity).Index(170);
-
-                //this.Map(m => m.Metrics.Cohesion.Followers).Index(180);
-
-                this.Map(m => m.Characteristics.Structure).Index(190);
-                this.Map(m => m.Characteristics.Dispersion).Index(200);
-                this.Map(m => m.Characteristics.Formality).Index(210);
-                this.Map(m => m.Characteristics.Engagement).Index(220);
-                this.Map(m => m.Characteristics.Longevity).Index(230);
-                //this.Map(m => m.Characteristics.Cohesion).Index(240);
-
-                this.Map(m => m.Pattern.SN).Index(250);
-                this.Map(m => m.Pattern.FG).Index(260);
-                this.Map(m => m.Pattern.PT).Index(270);
-                //this.Map(m => m.Pattern.WorkGroup).Index(280);
-                this.Map(m => m.Pattern.NoP).Index(290);
-                this.Map(m => m.Pattern.IC).Index(300);
-                this.Map(m => m.Pattern.FN).Index(310);
-                this.Map(m => m.Pattern.IN).Index(320);
-                this.Map(m => m.Pattern.CoP).Index(330);
+                //this.Map(m => m.Characteristics.OldDispersion).Index(200);
+                this.Map(m => m.Characteristics.NewDispersion).Index(201);
 
                 // EXTRA VARIABLES FOR COMPARIONS BETWEEN YOSHI AND YOSHI 2
-                this.Map(m => m.Metrics.Dispersion.AverageGeographicalDistance).Index(340);
-                this.Map(m => m.Metrics.Dispersion.AverageCulturalDispersion).Index(350);
-
-                this.Map(m => m.Metrics.Formality.MeanMembershipTypeOld).Index(360);
-
-                this.Map(m => m.Metrics.Engagement.MedianCommitDistribution).Index(370);
-                this.Map(m => m.Metrics.Engagement.MedianFileCollabDistribution).Index(380);
+                //this.Map(m => m.Metrics.Dispersion.AvgGeoDistance).Index(340);
+                //this.Map(m => m.Metrics.Dispersion.OldAvgCulDispersion).Index(350);
+                //this.Map(m => m.Metrics.Dispersion.NewAvgCulDispersion).Index(355);
             }
         }
     }

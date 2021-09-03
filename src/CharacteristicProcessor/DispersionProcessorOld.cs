@@ -4,23 +4,23 @@ using System.Collections.Generic;
 using System.Linq;
 using YOSHI.CommunityData;
 
-namespace YOSHI.CharacteristicProcessorNS
+namespace YOSHI.DispersionProcessorOld
 {
-    public static partial class CharacteristicProcessor
+    public static class DispersionProcessorO
     {
         /// <summary>
         /// A method that computes several metrics used to measure community dispersion. It modifies the given community.
         /// </summary>
         /// <param name="community">The community for which we need to compute the dispersion.</param>
-        private static void ComputeDispersion(Community community)
+        public static void ComputeDispersion(Community community)
         {
             List<Location> coordinates = community.Data.Coordinates;
-            List<string> countries = community.Data.Countries;
+            List<string> countries = community.Data.OldCountries;
 
             // Compute the variance of all geographical distances
             List<double> distances = ComputeGeographicalDistances(coordinates);
             double varianceGeographicalDistance = Statistics.ComputeVariance(distances);
-            community.Metrics.Dispersion.VarianceGeographicalDistance = varianceGeographicalDistance;
+            community.Metrics.Dispersion.VarGeoDistance = varianceGeographicalDistance;
             // Note: Geographical distance includes distances to members from who we do not have Hofstede indices for better accuracy.
 
             // Compute the variance for four Hofstede indices
@@ -30,20 +30,25 @@ namespace YOSHI.CharacteristicProcessorNS
             double varianceMas = Statistics.ComputeVariance(mass);
             double varianceUai = Statistics.ComputeVariance(uais);
 
+            community.Metrics.Dispersion.OldVariancePdi = variancePdi;
+            community.Metrics.Dispersion.OldVarianceIdv = varianceIdv;
+            community.Metrics.Dispersion.OldVarianceMas = varianceMas;
+            community.Metrics.Dispersion.OldVarianceUai = varianceUai;
+
             // Determine the average of the variances to obtain the variance of cultural distance
             double varianceCulturalDistance = (variancePdi + varianceIdv + varianceMas + varianceUai) / 4;
-            community.Metrics.Dispersion.VarianceHofstedeCulturalDistance = varianceCulturalDistance;
+            community.Metrics.Dispersion.OldVarCulDistance = varianceCulturalDistance;
 
             // Determine the global dispersion
-            community.Characteristics.Dispersion = Math.Sqrt((varianceGeographicalDistance + varianceCulturalDistance) / 2);
+            community.Characteristics.OldDispersion = Math.Sqrt((varianceGeographicalDistance + varianceCulturalDistance) / 2);
 
             // EXTRA COMPUTATIONS FOR COMPARISON YOSHI AND YOSHI 2
-            community.Metrics.Dispersion.AverageGeographicalDistance = distances.Average();
+            community.Metrics.Dispersion.AvgGeoDistance = distances.Average();
             double averagePdi = Statistics.ComputeStandardDeviation(pdis);
             double averageIdv = Statistics.ComputeStandardDeviation(idvs);
             double averageMas = Statistics.ComputeStandardDeviation(mass);
             double averageUai = Statistics.ComputeStandardDeviation(uais);
-            community.Metrics.Dispersion.AverageCulturalDispersion = (averagePdi + averageIdv + averageMas + averageUai) / 4.0;
+            community.Metrics.Dispersion.OldAvgCulDispersion = (averagePdi + averageIdv + averageMas + averageUai) / 4.0;
         }
 
         /// <summary>
@@ -90,10 +95,10 @@ namespace YOSHI.CharacteristicProcessorNS
 
             foreach (string country in countries)
             {
-                pdis.Add(HI.Hofstede[country].Pdi);
-                idvs.Add(HI.Hofstede[country].Idv);
-                mass.Add(HI.Hofstede[country].Mas);
-                uais.Add(HI.Hofstede[country].Uai);
+                pdis.Add(OldHI.Hofstede[country].Pdi);
+                idvs.Add(OldHI.Hofstede[country].Idv);
+                mass.Add(OldHI.Hofstede[country].Mas);
+                uais.Add(OldHI.Hofstede[country].Uai);
             }
 
             return (pdis, idvs, mass, uais);

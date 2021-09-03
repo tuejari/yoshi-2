@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using YOSHI.CharacteristicProcessorNS;
+using System.Linq;
 using YOSHI.CommunityData;
-using YOSHI.DataRetrieverNS;
-using YOSHI.DataRetrieverNS.Geocoding;
+using YOSHI.DispersionProcessorNew;
+using YOSHI.DispersionProcessorOld;
 
 namespace YOSHI
 {
@@ -30,6 +30,10 @@ namespace YOSHI
     {
         static async Task Main()
         {
+
+            // Used the statement below to test the old Hofstede Countries' compatibility with Bing Maps Geocoding
+            //await Geocoding.GeoService.TestOldHICountries(OldHI.Hofstede.Keys.ToList());
+
             // Retrieve the communities through console input handled by the IOModule.
             List<Community> communities = IOModule.TakeInput();
             Dictionary<string, string> failedCommunities = new Dictionary<string, string>();
@@ -38,77 +42,33 @@ namespace YOSHI
             {
                 try
                 {
-                    Console.WriteLine("------------------------------------------------"); // Line to distinguish between communities
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Started processing community {0} from {1}. Time: {2}", community.RepoName, community.RepoOwner, DateTime.Now.ToString());
-                    Console.ResetColor();
 
-                    // Retrieving GitHub data needed to compute whether the community is valid (i.e., it has at least
-                    // 100 commits (all time), it has at least 10 members active in the last 90 days, it has at least
-                    // 1 milestone (all time), and it has enough location data to compute dispersion. 
-                    Console.WriteLine("Retrieving GitHub data needed for checking validity...");
-                    await DataRetriever.RetrieveDataAndCheckValidity(community);
-
-                    // Retrieving GitHub data needed to compute whether the community exhibits a structure
-                    Console.WriteLine("Retrieving GitHub data needed for computing structure...");
-                    await DataRetriever.RetrieveStructureData(community);
-
-                    Console.WriteLine("Computing community structure...");
-                    CharacteristicProcessor.ComputeStructure(community);
-
-                    // If the community exhibits a structure then:
-                    if (community.Characteristics.Structure)
+                    if (!(community.Data.Coordinates.Count < 2 || community.Data.NewCountries.Count < 2))
                     {
-                        Console.WriteLine("Community exhibits a structure...");
+                        DispersionProcessorN.ComputeDispersion(community);
+                    } 
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Not enough coordinates ({0}) or countries (N) ({1})", community.Data.Coordinates.Count, community.Data.NewCountries.Count);
+                        Console.ResetColor();
+                    }
 
-                        // Miscellaneous characteristics are: dispersion, formality, cohesion, engagement, longevity
-                        Console.WriteLine("Retrieving GitHub data needed for miscellaneous characteristics...");
-                        await DataRetriever.RetrieveMiscellaneousData(community);
-
-                        Console.WriteLine("Computing miscellaneous characteristics...");
-                        CharacteristicProcessor.ComputeMiscellaneousCharacteristics(community);
-
-                        Console.WriteLine("Determining community pattern...");
-                        PatternProcessor.ComputePattern(community);
+                    if (!(community.Data.Coordinates.Count < 2 || community.Data.OldCountries.Count < 2))
+                    {
+                        DispersionProcessorO.ComputeDispersion(community);
                     }
                     else
                     {
-                        // The community exhibits no structure, hence we cannot compute a pattern. Thus we skip computing 
-                        // all other characteristics.
-                        throw new InvalidRepositoryException("This project does not exhibit a community structure.");
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Not enough coordinates ({0}) or countries (O) ({1})", community.Data.Coordinates.Count, community.Data.OldCountries.Count);
+                        Console.ResetColor();
                     }
 
-                    Console.WriteLine("Writing community data to file...");
                     IOModule.WriteToFile(community);
-
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Finished processing community {0} from {1}. Time: {2}", community.RepoName, community.RepoOwner, DateTime.Now.ToString());
-                    Console.ResetColor();
-                }
-                catch (GeocoderRateLimitException e)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e.Message);
-                    Console.ResetColor();
-                    failedCommunities.Add(community.RepoName, e.Message);
-                    break;
-                }
-                catch (InvalidRepositoryException e)
-                {
-                    // Skip this repository if it is not valid
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("Community {0} from {1} is not valid", community.RepoName, community.RepoOwner);
-                    Console.WriteLine("Exception: {0}. {1}", e.GetType(), e.Message);
-                    Console.ResetColor();
-                    failedCommunities.Add(community.RepoName, e.Message);
-                    continue;
                 }
                 catch (Exception e)
                 {
-                    // We want to output the number of Bing Maps Requests left, since it can take hours for Bing Maps Requests to update
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine("There are still {0} Bing Maps Requests left", GeoService.BingRequestsLeft);
-                    Console.ResetColor();
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Exception: {0}. {1}", e.GetType(), e.Message);
                     Console.ResetColor();
@@ -116,10 +76,6 @@ namespace YOSHI
                     continue;
                 }
             }
-            // We want to output the number of Bing Maps Requests left, since it can take hours for Bing Maps Requests to update
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("There are still {0} Bing Maps Requests left", GeoService.BingRequestsLeft);
-            Console.ResetColor();
 
             // Make sure to output the communities that failed at the end to make them easily identifiable
             if (failedCommunities.Count > 0)
@@ -134,7 +90,6 @@ namespace YOSHI
             }
 
             // Prevent the console window from automatically closing after the main process is done running
-            // TODO: Write the console log to a file
             Console.BackgroundColor = ConsoleColor.DarkGreen;
             Console.WriteLine("The application has finished processing the inputted communities.");
             Console.WriteLine("Press Enter to close this window . . .");

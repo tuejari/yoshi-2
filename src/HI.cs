@@ -10,6 +10,10 @@ namespace YOSHI
     /// </summary>
     public static class HI
     {
+        // The new Hofstede indices used by YOSHI 2 missed values for:
+        // Eswatini
+        // Macao SAR
+
         public readonly static Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)> Hofstede
         = new Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)>(new CaseAccentInsensitiveEqualityComparer())
         {
