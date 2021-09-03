@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace YOSHI
 {
     /// <summary>
-    /// Class that implements statistics computations. Cannot implement a generic method that takes numerics in c#:
-    /// See https://stackoverflow.com/questions/22261510/creating-a-method-in-c-sharp-that-can-take-double-decimal-and-floats-without-r
+    /// Class that implements statistics computations. Cannot implement a 
+    /// generic method that takes numerics in c#:
+    /// See https://stackoverflow.com/q/22261510
     /// Therefore we repeat code.
     /// </summary>
     public static class Statistics
@@ -15,35 +16,41 @@ namespace YOSHI
         /// Return the quartile values of an ordered set of doubles
         ///   assume the sorting has already been done.
         ///   
-        /// This actually turns out to be a bit of a PITA, because there is no universal agreement 
-        ///   on choosing the quartile values. In the case of odd values, some count the median value
-        ///   in finding the 1st and 3rd quartile and some discard the median value. 
+        /// This actually turns out to be a bit of a PITA, because there is no 
+        ///   universal agreement on choosing the quartile values. In the case 
+        ///   of odd values, some count the median value in finding the 1st and 
+        ///   3rd quartile and some discard the median value. 
         ///   the two different methods result in two different answers.
-        ///   The below method produces the arithmatic mean of the two methods, and insures the median
-        ///   is given it's correct weight so that the median changes as smoothly as possible as 
-        ///   more data ppints are added.
+        ///   The below method produces the arithmatic mean of the two methods, 
+        ///   and insures the median is given it's correct weight so that the 
+        ///   median changes as smoothly as possible as more data ppints are added.
         ///    
         /// This method uses the following logic:
         /// 
         /// ===If there are an even number of data points:
-        ///    Use the median to divide the ordered data set into two halves. 
-        ///    The lower quartile value is the median of the lower half of the data. 
-        ///    The upper quartile value is the median of the upper half of the data.
+        ///   Use the median to divide the ordered data set into two halves. 
+        ///   The lower quartile value is the median of the lower half of the data. 
+        ///   The upper quartile value is the median of the upper half of the data.
         ///    
         /// ===If there are (4n+1) data points:
-        ///    The lower quartile is 25% of the nth data value plus 75% of the (n+1)th data value.
-        ///    The upper quartile is 75% of the (3n+1)th data point plus 25% of the (3n+2)th data point.
+        ///   The lower quartile is 25% of the nth data value plus 75% of the 
+        ///   (n+1)th data value.
+        ///   The upper quartile is 75% of the (3n+1)th data point plus 25% of 
+        ///   the (3n+2)th data point.
         ///    
         ///===If there are (4n+3) data points:
-        ///   The lower quartile is 75% of the (n+1)th data value plus 25% of the (n+2)th data value.
-        ///   The upper quartile is 25% of the (3n+2)th data point plus 75% of the (3n+3)th data point.
+        ///   The lower quartile is 75% of the (n+1)th data value plus 25% of 
+        ///   the (n+2)th data value.
+        ///   The upper quartile is 25% of the (3n+2)th data point plus 75% of 
+        ///   the (3n+3)th data point.
         /// 
         /// </summary>
-        /// <source>https://stackoverflow.com/questions/14683467/finding-the-first-and-third-quartiles</source>
+        /// <source>https://stackoverflow.com/q/14683467</source>
         public static (double, double, double) Quartiles(double[] afVal)
         {
             int iSize = afVal.Length;
-            int iMid = iSize / 2; //this is the mid from a zero based index, eg mid of 7 = 3;
+            int iMid = iSize / 2; //this is the mid from a zero based index,
+                                  //eg mid of 7 = 3;
 
             double fQ1 = 0;
             double fQ2;

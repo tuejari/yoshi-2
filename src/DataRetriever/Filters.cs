@@ -1,4 +1,4 @@
-﻿using Octokit;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using YOSHI.CommunityData;
@@ -58,7 +58,8 @@ namespace YOSHI.DataRetrieverNS
             foreach (GitHubCommit commit in commits)
             {
                 // Check that committer date also falls within the time window before adding the author in the list of members
-                if (commit.Committer != null && commit.Committer.Login != null && CheckWithinTimeWindow(commit.Commit.Committer.Date, days))
+                if (commit.Committer != null && commit.Committer.Login != null 
+                    && CheckWithinTimeWindow(commit.Commit.Committer.Date, days))
                 {
                     usernames.Add(commit.Committer.Login);
                 }

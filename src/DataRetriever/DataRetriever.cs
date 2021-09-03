@@ -1,4 +1,4 @@
-﻿using Octokit;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,19 +43,26 @@ namespace YOSHI.DataRetrieverNS
         {
             string repoName = community.RepoName;
             string repoOwner = community.RepoOwner;
-            Data data = community.Data;
 
             try
             {
-                // TODO: Done. Check whether all GitHub data is limited to the time window (e.g., no remaining data from today, only data from 90 days before today)
-                // There must be at least 100 commits
+                // Retrieve all commits until the end date of the time window
                 CommitRequest commitRequest = new CommitRequest { Until = Filters.EndDateTimeWindow };
-                IReadOnlyList<GitHubCommit> commits = await GitHubRateLimitHandler.Delegate(Client.Repository.Commit.GetAll, repoOwner, repoName, commitRequest, MaxSizeBatches);
+                IReadOnlyList<GitHubCommit> commits = await GitHubRateLimitHandler.Delegate(
+                    Client.Repository.Commit.GetAll, 
+                    repoOwner, 
+                    repoName, 
+                    commitRequest, 
+                    MaxSizeBatches);
 
                 List<GitHubCommit> commitsWithinTimeWindow = Filters.ExtractCommitsWithinTimeWindow(commits);
-                data.MemberUsernames = Filters.ExtractUsernamesFromCommits(commitsWithinTimeWindow);
-                (data.Members, data.MemberUsernames) = await RetrieveMembers(data.MemberUsernames);
 
+                // Determine the members active in the three month time period
+                HashSet<string> tempMembers = Filters.ExtractUsernamesFromCommits(commitsWithinTimeWindow);
+                (List<User> members, HashSet<string> memberUsernames) = await RetrieveMembers(tempMembers);
+
+                // Calculate the number of commits per member
+                // (over the entire life span until the end date of the analysis period)
                 Dictionary<string, int> commitsPerMember = new Dictionary<string, int>();
 
                 foreach (GitHubCommit c in commits)
@@ -70,7 +77,10 @@ namespace YOSHI.DataRetrieverNS
 
                         commitsPerMember[committer]++;
                     }
-                    if (c.Author != null && c.Author.Login != null && (c.Committer == null || c.Author.Login != c.Committer.Login))
+                    // Only count authored commits if they are not the committer too
+                    // This prevents double counting of the same commit
+                    if (c.Author != null && c.Author.Login != null && 
+                        (c.Committer == null || c.Author.Login != c.Committer.Login))
                     {
                         string author = c.Author.Login ?? "";
                         if (!commitsPerMember.ContainsKey(author))
@@ -101,11 +111,14 @@ namespace YOSHI.DataRetrieverNS
                     }
                 }
 
-                foreach (User member in data.Members)
+                // Report the members who have a public email, have committed in the
+                // analysis period and have a number of commits higher than the third quartile.
+                foreach (User member in members)
                 {
                     if (usernames.Contains(member.Login) && member.Email != null)
                     {
-                        Console.WriteLine("{0},{1},{2},{3},{4}", repoOwner, repoName, member.Login, commitsPerMember[member.Login], member.Email);
+                        Console.WriteLine("{0},{1},{2},{3},{4}", repoOwner, repoName, 
+                            member.Login, commitsPerMember[member.Login], member.Email);
                     }
                 }
             }
@@ -161,28 +174,6 @@ namespace YOSHI.DataRetrieverNS
                     continue;
                 }
             }
-
-            //// Report whether any bots were identified
-            //Console.ForegroundColor = ConsoleColor.Blue;
-            //if (bots.Count > 0)
-            //{
-            //    Console.WriteLine("The following users were classified as a bot: ");
-            //    foreach (string bot in bots)
-            //    {
-            //        Console.WriteLine(bot);
-            //    }
-            //}
-
-            //// Report whether any organizations were identifed
-            //if (organizations.Count > 0)
-            //{
-            //    Console.WriteLine("The following users were classified as an organization: ");
-            //    foreach (string org in organizations)
-            //    {
-            //        Console.WriteLine(org);
-            //    }
-            //}
-            //Console.ResetColor();
 
             return (members, updatedUsernames);
         }

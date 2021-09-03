@@ -1,4 +1,4 @@
-﻿using Octokit;
+using Octokit;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,8 +8,10 @@ namespace YOSHI.DataRetrieverNS
     public static class GitHubRateLimitHandler
     {
 
-        // AUXILIARY: Methods used to delegate GitHub API calls and handling of rate limits. 
-        /// <param name="maxBatchSize">Setting API options to retrieve max batch sizes, reducing the number of requests.</param>
+        // AUXILIARY: Methods used to delegate GitHub API calls and handling of
+        // GitHub rate limits. 
+        /// <param name="maxBatchSize">Setting API options to retrieve max batch 
+        /// sizes, reducing the number of requests.</param>
         public async static Task<T> Delegate<T>(
             Func<string, string, CommitRequest, ApiOptions, Task<T>> func,
             string repoOwner,
@@ -26,7 +28,8 @@ namespace YOSHI.DataRetrieverNS
                 }
                 catch (RateLimitExceededException)
                 {
-                    // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
+                    // When we exceed the rate limit we check when the limit resets
+                    // and wait until that time before we try 2 more times.
                     WaitUntilReset();
                 }
             }
@@ -55,7 +58,8 @@ namespace YOSHI.DataRetrieverNS
                 }
                 catch (RateLimitExceededException)
                 {
-                    // When we exceed the rate limit we check when the limit resets and wait until that time before we try 2 more times.
+                    // When we exceed the rate limit we check when the limit resets
+                    // and wait until that time before we try 2 more times.
                     WaitUntilReset();
                 }
             }
@@ -91,7 +95,8 @@ namespace YOSHI.DataRetrieverNS
             Console.ResetColor(); // Reset before sleep, otherwise color remains even when application is closed during the sleep.
             Thread.Sleep(timespan); // Wait until the rate limit resets
             Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine("Done waiting for the rate limit reset, continuing now: " + DateTimeOffset.Now.DateTime.ToLocalTime().ToString());
+            Console.WriteLine("Done waiting for the rate limit reset, continuing now: " + 
+                DateTimeOffset.Now.DateTime.ToLocalTime().ToString());
             Console.ResetColor();
         }
     }
