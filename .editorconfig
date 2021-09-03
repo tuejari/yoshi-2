@@ -111,7 +111,7 @@ csharp_style_pattern_local_over_anonymous_function = true:warning
 csharp_style_prefer_index_operator = true:warning
 csharp_style_prefer_range_operator = true:warning
 csharp_style_throw_expression = true
-csharp_style_unused_value_assignment_preference = discard_variable
+csharp_style_unused_value_assignment_preference =discard_variable:error
 csharp_style_unused_value_expression_statement_preference = discard_variable
 
 # 'using' directive preferences
@@ -210,3 +210,4 @@ dotnet_naming_style.begins_with_i.capitalization = pascal_case
 [*.{cs,vb}]
 guidelines = 120
 guidelines_style = 1px solid 40ff0000
+dotnet_code_quality_unused_parameters=all:error

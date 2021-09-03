@@ -12,80 +12,93 @@ namespace YOSHI
     public static class Statistics
     {
         /// <summary>
-        /// Given a list of integers, this method sorts the list in place and then computes the average median. 
-        /// I.e., the median whenever the list has an odd number of elements, the average of the middle 2 elements if 
-        /// the list has an even number of elements.
+        /// Return the quartile values of an ordered set of doubles
+        ///   assume the sorting has already been done.
+        ///   
+        /// This actually turns out to be a bit of a PITA, because there is no universal agreement 
+        ///   on choosing the quartile values. In the case of odd values, some count the median value
+        ///   in finding the 1st and 3rd quartile and some discard the median value. 
+        ///   the two different methods result in two different answers.
+        ///   The below method produces the arithmatic mean of the two methods, and insures the median
+        ///   is given it's correct weight so that the median changes as smoothly as possible as 
+        ///   more data ppints are added.
+        ///    
+        /// This method uses the following logic:
+        /// 
+        /// ===If there are an even number of data points:
+        ///    Use the median to divide the ordered data set into two halves. 
+        ///    The lower quartile value is the median of the lower half of the data. 
+        ///    The upper quartile value is the median of the upper half of the data.
+        ///    
+        /// ===If there are (4n+1) data points:
+        ///    The lower quartile is 25% of the nth data value plus 75% of the (n+1)th data value.
+        ///    The upper quartile is 75% of the (3n+1)th data point plus 25% of the (3n+2)th data point.
+        ///    
+        ///===If there are (4n+3) data points:
+        ///   The lower quartile is 75% of the (n+1)th data value plus 25% of the (n+2)th data value.
+        ///   The upper quartile is 25% of the (3n+2)th data point plus 75% of the (3n+3)th data point.
+        /// 
         /// </summary>
-        /// <param name="list">The list to obtain the median from. Note: Will be modified in place.</param>
-        /// <returns>The median from the given list.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when list is empty.</exception>
-        public static double ComputeMedian(List<int> list)
+        /// <source>https://stackoverflow.com/questions/14683467/finding-the-first-and-third-quartiles</source>
+        public static (double, double, double) Quartiles(double[] afVal)
         {
-            if (list.Count > 0)
-            {
-                list.Sort();
-                return list.Count % 2 == 0 ? (list[(list.Count / 2) - 1] + list[list.Count / 2]) / 2.0 : list[list.Count / 2];
-            }
-            else
-            {
-                throw new InvalidOperationException("List contains no elements");
-            }
-        }
+            int iSize = afVal.Length;
+            int iMid = iSize / 2; //this is the mid from a zero based index, eg mid of 7 = 3;
 
-        /// <summary>
-        /// Given a list of doubles, this method sorts the list in place and then computes the average median. 
-        /// I.e., the median whenever the list has an odd number of elements, the average of the middle 2 elements if 
-        /// the list has an even number of elements.
-        /// </summary>
-        /// <param name="list">The list to obtain the median from. Note: Will be modified in place.</param>
-        /// <returns>The median from the given list.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when list is empty.</exception>
-        public static double ComputeMedian(List<double> list)
-        {
-            if (list.Count > 0)
-            {
-                list.Sort();
-                return list.Count % 2 == 0 ? (list[(list.Count / 2) - 1] + list[list.Count / 2]) / 2.0 : list[list.Count / 2];
-            }
-            else
-            {
-                throw new InvalidOperationException("List contains no elements");
-            }
-        }
+            double fQ1 = 0;
+            double fQ2;
+            double fQ3 = 0;
 
-        /// <summary>
-        /// Easy access method to compute the variance of a list.
-        /// </summary>
-        /// <param name="list">List to compute the variance of. May not be empty.</param>
-        /// <returns>The variance of the list.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when list is empty.</exception>
-        public static double ComputeVariance(List<double> list)
-        {
-            if (list.Count > 0)
+            if (iSize % 2 == 0)
             {
-                double mean = list.Average();
-                double temp = 0;
-                foreach (double value in list)
+                //================ EVEN NUMBER OF POINTS: =====================
+                //even between low and high point
+                fQ2 = (afVal[iMid - 1] + afVal[iMid]) / 2;
+
+                int iMidMid = iMid / 2;
+
+                //easy split 
+                if (iMid % 2 == 0)
                 {
-                    temp += (value - mean) * (value - mean);
+                    fQ1 = (afVal[iMidMid - 1] + afVal[iMidMid]) / 2;
+                    fQ3 = (afVal[iMid + iMidMid - 1] + afVal[iMid + iMidMid]) / 2;
                 }
-                return temp / list.Count;
+                else
+                {
+                    fQ1 = afVal[iMidMid];
+                    fQ3 = afVal[iMidMid + iMid];
+                }
+            }
+            else if (iSize == 1)
+            {
+                //================= special case, sorry ================
+                fQ1 = afVal[0];
+                fQ2 = afVal[0];
+                fQ3 = afVal[0];
             }
             else
             {
-                throw new InvalidOperationException("List contains no elements");
-            }
-        }
+                //odd number so the median is just the midpoint in the array.
+                fQ2 = afVal[iMid];
 
-        /// <summary>
-        /// Easy access metthod to compute the standard deviation of a list of doubles.
-        /// </summary>
-        /// <param name="list">List to compute the standard deviation of. May not be empty.</param>
-        /// <returns>The standard deviation of the list.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when list is empty.</exception>
-        public static double ComputeStandardDeviation(List<double> list)
-        {
-            return list.Count > 0 ? Math.Sqrt(ComputeVariance(list)) : throw new InvalidOperationException("List contains no elements");
+                if ((iSize - 1) % 4 == 0)
+                {
+                    //======================(4n-1) POINTS =========================
+                    int n = (iSize - 1) / 4;
+                    fQ1 = (afVal[n - 1] * .25) + (afVal[n] * .75);
+                    fQ3 = (afVal[3 * n] * .75) + (afVal[3 * n + 1] * .25);
+                }
+                else if ((iSize - 3) % 4 == 0)
+                {
+                    //======================(4n-3) POINTS =========================
+                    int n = (iSize - 3) / 4;
+
+                    fQ1 = (afVal[n] * .75) + (afVal[n + 1] * .25);
+                    fQ3 = (afVal[3 * n + 1] * .25) + (afVal[3 * n + 2] * .75);
+                }
+            }
+
+            return (fQ1, fQ2, fQ3);
         }
     }
 }
