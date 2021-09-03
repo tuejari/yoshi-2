@@ -183,20 +183,20 @@ namespace YOSHI
         {
             public CommunityMap()
             {
-                //this.Map(m => m.RepoOwner).Index(0);
+                this.Map(m => m.RepoOwner).Index(0);
                 this.Map(m => m.RepoName).Index(1);
 
-                //this.Map(m => m.Data.Coordinates.Count).Name("NrLocations").Index(15);
-                //this.Map(m => m.Data.OldCountries.Count).Name("NrOldHiCountries").Index(17);
-                //this.Map(m => m.Data.NewCountries.Count).Name("NrNewHiCountries").Index(18);
+                this.Map(m => m.Data.Coordinates.Count).Name("NrLocations").Index(15);
+                this.Map(m => m.Data.OldCountries.Count).Name("NrOldHiCountries").Index(17);
+                this.Map(m => m.Data.NewCountries.Count).Name("NrNewHiCountries").Index(18);
 
-                //this.Map(m => m.Metrics.Dispersion.VarGeoDistance).Index(50);
+                this.Map(m => m.Metrics.Dispersion.VarGeoDistance).Index(50);
 
-                //this.Map(m => m.Metrics.Dispersion.OldVariancePdi).Index(60);
-                //this.Map(m => m.Metrics.Dispersion.OldVarianceIdv).Index(61);
-                //this.Map(m => m.Metrics.Dispersion.OldVarianceMas).Index(62);
-                //this.Map(m => m.Metrics.Dispersion.OldVarianceUai).Index(63);
-                //this.Map(m => m.Metrics.Dispersion.OldVarCulDistance).Index(64);
+                this.Map(m => m.Metrics.Dispersion.OldVariancePdi).Index(60);
+                this.Map(m => m.Metrics.Dispersion.OldVarianceIdv).Index(61);
+                this.Map(m => m.Metrics.Dispersion.OldVarianceMas).Index(62);
+                this.Map(m => m.Metrics.Dispersion.OldVarianceUai).Index(63);
+                this.Map(m => m.Metrics.Dispersion.OldVarCulDistance).Index(64);
 
                 this.Map(m => m.Metrics.Dispersion.NewVariancePdi).Index(65);
                 this.Map(m => m.Metrics.Dispersion.NewVarianceIdv).Index(66);
@@ -204,13 +204,13 @@ namespace YOSHI
                 this.Map(m => m.Metrics.Dispersion.NewVarianceUai).Index(68);
                 this.Map(m => m.Metrics.Dispersion.NewVarCulDistance).Index(69);
 
-                //this.Map(m => m.Characteristics.OldDispersion).Index(200);
+                this.Map(m => m.Characteristics.OldDispersion).Index(200);
                 this.Map(m => m.Characteristics.NewDispersion).Index(201);
 
                 // EXTRA VARIABLES FOR COMPARIONS BETWEEN YOSHI AND YOSHI 2
-                //this.Map(m => m.Metrics.Dispersion.AvgGeoDistance).Index(340);
-                //this.Map(m => m.Metrics.Dispersion.OldAvgCulDispersion).Index(350);
-                //this.Map(m => m.Metrics.Dispersion.NewAvgCulDispersion).Index(355);
+                this.Map(m => m.Metrics.Dispersion.AvgGeoDistance).Index(340);
+                this.Map(m => m.Metrics.Dispersion.OldAvgCulDispersion).Index(350);
+                this.Map(m => m.Metrics.Dispersion.NewAvgCulDispersion).Index(355);
             }
         }
     }
