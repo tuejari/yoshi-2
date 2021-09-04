@@ -1,6 +1,4 @@
-using Geocoding;
 using Geocoding.Microsoft;
-using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +32,7 @@ namespace YOSHI.Geocoding
                     BingAddress address = await GetBingAddress(country);
                     if (!comparer.Equals(country, address.CountryRegion))
                     {
-                        Console.WriteLine("OldHI: {0}, {1}",country,address.CountryRegion);
+                        Console.WriteLine("OldHI: {0}, {1}", country, address.CountryRegion);
                     }
                 }
                 catch (BingGeocodingException e)

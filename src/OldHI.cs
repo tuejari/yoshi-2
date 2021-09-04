@@ -6,7 +6,7 @@ using System.Text;
 namespace YOSHI
 {
     /// <summary>
-    /// Class responsible for the Hofstede Indices. 
+    /// Class responsible for the Old Hofstede Indices. 
     /// </summary>
     public static class OldHI
     {
@@ -27,8 +27,10 @@ namespace YOSHI
         //Romania
         //Iceland
 
-        public readonly static Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)> Hofstede
-        = new Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)>(new CaseAccentInsensitiveEqualityComparer())
+        public readonly static Dictionary<
+            string, (int Pdi, int Idv, int Mas, int Uai)> Hofstede
+        = new Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)
+            >(new CaseAccentInsensitiveEqualityComparer())
         {
             { "argentina", (49, 46, 56, 86) },
             { "australia", (36, 90, 61, 51) },
@@ -103,7 +105,9 @@ namespace YOSHI
             //{ "boston", (40, 91, 62, 46) },
             //{ "texas", (40, 91, 62, 46) },
             //{ "atlanta", (40, 91, 62, 46) },
-            //{ "vancouver", (40, 91, 62, 46) } // City in Canada, our tool finds Canada, hence does not use these values once. We cannot simply replace "vancouver" with Canada.
+            // City in Canada, our tool finds Canada, hence does not use these
+            // values once. We cannot simply replace "vancouver" with Canada.
+            //{ "vancouver", (40, 91, 62, 46) } 
             //{ "mountain view", (40, 91, 62, 46) },
             //{ "chicago", (40, 91, 62, 46) },
             //{ "seattle", (40, 91, 62, 46) },
@@ -111,20 +115,27 @@ namespace YOSHI
         };
 
         /// <summary>
-        /// Equality comparer of strings that ignores lower/uppercase and accents (diacritics). Note that if the 
-        /// Hofstede dictionary was not initialized with this equality comparer, it would likely fail to identify 
-        /// "são tomé and princípe" or inconsistencies. This equality comparer has been tested. 
+        /// Equality comparer of strings that ignores lower/uppercase and accents
+        /// (diacritics). Note that if the Hofstede dictionary was not initialized
+        /// with this equality comparer, it would likely fail to identify "são tomé
+        /// and princípe" or inconsistencies.
         /// </summary>
-        public class CaseAccentInsensitiveEqualityComparer : IEqualityComparer<string>
+        public class CaseAccentInsensitiveEqualityComparer
+            : IEqualityComparer<string>
         {
             public bool Equals(string x, string y)
             {
-                return string.Compare(x, y, CultureInfo.InvariantCulture, CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) == 0;
+                return string.Compare(x, y,
+                    CultureInfo.InvariantCulture,
+                    CompareOptions.IgnoreNonSpace 
+                    | CompareOptions.IgnoreCase) == 0;
             }
 
             public int GetHashCode(string obj)
             {
-                return obj != null ? this.RemoveDiacritics(obj).ToUpperInvariant().GetHashCode() : 0;
+                return obj != null ?
+                    this.RemoveDiacritics(obj).ToUpperInvariant().GetHashCode()
+                    : 0;
             }
 
             private string RemoveDiacritics(string text)

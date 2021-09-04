@@ -20,7 +20,7 @@ namespace YOSHI.DispersionProcessorNew
             // Compute the variance of all geographical distances
             List<double> distances = ComputeGeographicalDistances(coordinates);
             double varianceGeographicalDistance = Statistics.ComputeVariance(distances);
-            community.Metrics.Dispersion.VarGeoDistance = varianceGeographicalDistance;
+            community.Dispersion.VarGeoDistance = varianceGeographicalDistance;
             // Note: Geographical distance includes distances to members from who we do not have Hofstede indices for better accuracy.
 
             // Compute the variance for four Hofstede indices
@@ -30,25 +30,25 @@ namespace YOSHI.DispersionProcessorNew
             double varianceMas = Statistics.ComputeVariance(mass);
             double varianceUai = Statistics.ComputeVariance(uais);
 
-            community.Metrics.Dispersion.NewVariancePdi = variancePdi;
-            community.Metrics.Dispersion.NewVarianceIdv = varianceIdv;
-            community.Metrics.Dispersion.NewVarianceMas = varianceMas;
-            community.Metrics.Dispersion.NewVarianceUai = varianceUai;
+            community.Dispersion.NewVariancePdi = variancePdi;
+            community.Dispersion.NewVarianceIdv = varianceIdv;
+            community.Dispersion.NewVarianceMas = varianceMas;
+            community.Dispersion.NewVarianceUai = varianceUai;
 
             // Determine the average of the variances to obtain the variance of cultural distance
             double varianceCulturalDistance = (variancePdi + varianceIdv + varianceMas + varianceUai) / 4;
-            community.Metrics.Dispersion.NewVarCulDistance = varianceCulturalDistance;
+            community.Dispersion.NewVarCulDistance = varianceCulturalDistance;
 
             // Determine the global dispersion
-            community.Characteristics.NewDispersion = Math.Sqrt((varianceGeographicalDistance + varianceCulturalDistance) / 2);
+            community.Dispersion.NewDispersion = Math.Sqrt((varianceGeographicalDistance + varianceCulturalDistance) / 2);
 
             // EXTRA COMPUTATIONS FOR COMPARISON YOSHI AND YOSHI 2
-            community.Metrics.Dispersion.AvgGeoDistance = distances.Average();
+            community.Dispersion.AvgGeoDistance = distances.Average();
             double averagePdi = Statistics.ComputeStandardDeviation(pdis);
             double averageIdv = Statistics.ComputeStandardDeviation(idvs);
             double averageMas = Statistics.ComputeStandardDeviation(mass);
             double averageUai = Statistics.ComputeStandardDeviation(uais);
-            community.Metrics.Dispersion.NewAvgCulDispersion = (averagePdi + averageIdv + averageMas + averageUai) / 4.0;
+            community.Dispersion.NewAvgCulDispersion = (averagePdi + averageIdv + averageMas + averageUai) / 4.0;
         }
 
         /// <summary>
@@ -60,7 +60,6 @@ namespace YOSHI.DispersionProcessorNew
         /// <returns>A list of geographical distances between each unique pair of coordinates.</returns>
         private static List<double> ComputeGeographicalDistances(List<Location> coordinates)
         {
-            // TODO: threshold (percentage) for number of addresses should be set in DataRetriever
             List<double> distances = new List<double>();
 
             // Compute the medium distance for each distinct pair of addresses in the given list of addresses

@@ -1,7 +1,8 @@
 namespace YOSHI.CommunityData.MetricData
 {
     /// <summary>
-    /// This class is used to store values for metrics used to compute a community's dispersion.
+    /// This class is used to store values for metrics used to compute a 
+    /// community's dispersion.
     /// </summary>
     public class Dispersion
     {
@@ -21,5 +22,8 @@ namespace YOSHI.CommunityData.MetricData
         public double NewVarianceUai { get; set; }
         public double NewVarCulDistance { get; set; }
         public double NewAvgCulDispersion { get; set; }
+        // Characteristics
+        public double OldDispersion { get; set; }
+        public double NewDispersion { get; set; }
     }
 }

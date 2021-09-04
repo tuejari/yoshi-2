@@ -208,7 +208,7 @@ dotnet_naming_style.begins_with_i.capitalization = pascal_case
 
 # Ruler 
 [*.{cs,vb}]
-guidelines = 120
+guidelines = 83
 guidelines_style = 1px solid 40ff0000
 
 charset = utf-8

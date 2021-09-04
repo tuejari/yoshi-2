@@ -6,7 +6,7 @@ using System.Text;
 namespace YOSHI
 {
     /// <summary>
-    /// Class responsible for the Hofstede Indices. 
+    /// Class responsible for the New Hofstede Indices. 
     /// </summary>
     public static class HI
     {
@@ -14,8 +14,10 @@ namespace YOSHI
         // Eswatini
         // Macao SAR
 
-        public readonly static Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)> Hofstede
-        = new Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)>(new CaseAccentInsensitiveEqualityComparer())
+        public readonly static Dictionary<
+            string, (int Pdi, int Idv, int Mas, int Uai)> Hofstede
+        = new Dictionary<string, (int Pdi, int Idv, int Mas, int Uai)
+            >(new CaseAccentInsensitiveEqualityComparer())
         {
                 { "albania", (90, 20, 80, 70) },
                 { "algeria", (80, 35, 35, 70) },
@@ -138,20 +140,27 @@ namespace YOSHI
         };
 
         /// <summary>
-        /// Equality comparer of strings that ignores lower/uppercase and accents (diacritics). Note that if the 
-        /// Hofstede dictionary was not initialized with this equality comparer, it would likely fail to identify 
-        /// "são tomé and princípe" or inconsistencies. This equality comparer has been tested. 
+        /// Equality comparer of strings that ignores lower/uppercase and accents
+        /// (diacritics). Note that if the Hofstede dictionary was not initialized
+        /// with this equality comparer, it would likely fail to identify "são tomé
+        /// and princípe" or inconsistencies.
         /// </summary>
-        public class CaseAccentInsensitiveEqualityComparer : IEqualityComparer<string>
+        public class CaseAccentInsensitiveEqualityComparer 
+            : IEqualityComparer<string>
         {
             public bool Equals(string x, string y)
             {
-                return string.Compare(x, y, CultureInfo.InvariantCulture, CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) == 0;
+                return string.Compare(x, y, 
+                    CultureInfo.InvariantCulture, 
+                    CompareOptions.IgnoreNonSpace 
+                    | CompareOptions.IgnoreCase) == 0;
             }
 
             public int GetHashCode(string obj)
             {
-                return obj != null ? this.RemoveDiacritics(obj).ToUpperInvariant().GetHashCode() : 0;
+                return obj != null ? 
+                    this.RemoveDiacritics(obj).ToUpperInvariant().GetHashCode() 
+                    : 0;
             }
 
             private string RemoveDiacritics(string text)
