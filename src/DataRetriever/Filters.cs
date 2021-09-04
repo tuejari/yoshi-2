@@ -91,59 +91,5 @@ namespace YOSHI.DataRetrieverNS
             DateTimeOffset startDate = EndDateTimeWindow.AddDays(-days);
             return dateTime >= startDate && dateTime <= EndDateTimeWindow;
         }
-
-        /// <summary>
-        /// Given a commit, check whether the committer is valid (i.e., the committer is not null, the committer's login
-        /// is not null, and the committer is considered a member in the last 3 months).
-        /// </summary>
-        /// <param name="commit">The commit to check</param>
-        /// <param name="memberUsernames">A set of members</param>
-        /// <returns>Whether the committer of the given commit is valid</returns>
-        public static bool ValidCommitter(GitHubCommit commit, HashSet<string> memberUsernames)
-        {
-            return commit.Committer != null
-                && commit.Committer.Login != null
-                && memberUsernames.Contains(commit.Committer.Login);
-        }
-
-        /// <summary>
-        /// Given a commit, check whether the author is valid (i.e., the author is not null, the author's login
-        /// is not null, and the author is considered a member in the last 3 months).
-        /// </summary>
-        /// <param name="commit">The commit to check</param>
-        /// <param name="memberUsernames">A set of members</param>
-        /// <returns>Whether the author of the given commit is valid</returns>
-        public static bool ValidAuthor(GitHubCommit commit, HashSet<string> memberUsernames)
-        {
-            return commit.Author != null
-                && commit.Author.Login != null
-                && memberUsernames.Contains(commit.Author.Login);
-        }
-
-        /// <summary>
-        /// Given a commit, check whether the committer is valid (i.e., the committer is not null, the committer's login
-        /// is not null, the committer date is within the 3 month window, and the committer is considered a member in 
-        /// the last 3 months).
-        /// </summary>
-        /// <param name="commit">The commit to check</param>
-        /// <param name="memberUsernames">A set of members</param>
-        /// <returns>Whether the committer of the given commit is valid</returns>
-        public static bool ValidCommitterWithinTimeWindow(GitHubCommit commit, HashSet<string> memberUsernames)
-        {
-            return ValidCommitter(commit, memberUsernames) && CheckWithinTimeWindow(commit.Commit.Committer.Date);
-        }
-
-        /// <summary>
-        /// Given a commit, check whether the author is valid (i.e., the author is not null, the author's login
-        /// is not null, the author date is within the 3 month window, and the author is considered a member in 
-        /// the last 3 months).
-        /// </summary>
-        /// <param name="commit">The commit to check</param>
-        /// <param name="memberUsernames">A set of members</param>
-        /// <returns>Whether the committer of the given commit is valid</returns>
-        public static bool ValidAuthorWithinTimeWindow(GitHubCommit commit, HashSet<string> memberUsernames)
-        {
-            return ValidAuthor(commit, memberUsernames) && CheckWithinTimeWindow(commit.Commit.Author.Date);
-        }
     }
 }
